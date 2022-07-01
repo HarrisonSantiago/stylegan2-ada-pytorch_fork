@@ -9,11 +9,9 @@ from PIL import Image
 from tqdm import tqdm
 import torch.nn as nn
 import lpips
-from model import Generator
 torch.set_printoptions(precision=5)
 from torch import nn
-from torch.nn import functional as F
-from collections import OrderedDict
+
 from utils import *
 import copy
 
