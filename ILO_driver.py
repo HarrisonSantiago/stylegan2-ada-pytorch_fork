@@ -286,7 +286,7 @@ class LatentOptimizer(torch.nn.Module):
         #Driver for the whole thing, this used to also be called invert
 
     def step1(self, target_exc, num_steps = 1000, w_avg_samples = 10000,initial_learning_rate = 0.1):
-        z_init = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
+        z_init = torch.from_numpy(np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim))
 
         optimizer = torch.optim.Adam([z_init], lr = initial_learning_rate)
         loss_fcn = nn.MSELoss()
