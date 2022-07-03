@@ -293,10 +293,12 @@ class LatentOptimizer(torch.nn.Module):
 
         for step in range(num_steps):
             gen_img = torch.squeeze(self.G(z_init, c=None, noise_mode='const'))
+            gen_img = (gen_img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+
             #gen_exc = ISETBio[]
             gen_exc = gen_img
 
-            loss = loss_fcn(gen_exc, target_exc)
+            loss = loss_fcn(gen_exc[0], target_exc)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
