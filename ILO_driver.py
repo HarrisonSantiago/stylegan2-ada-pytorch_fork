@@ -326,7 +326,7 @@ class LatentOptimizer(torch.nn.Module):
 
         print('Saving image')
 
-        img = (img2.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+        img = (img2.permute(0, 2, 3, 1))
         Image.fromarray(img[0].cpu().numpy(), 'RGB').save('test3.png')
 
 
