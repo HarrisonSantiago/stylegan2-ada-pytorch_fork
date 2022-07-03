@@ -59,7 +59,7 @@ class SphericalOptimizer():
             param.mul_(self.radii[param])
 
 class LatentOptimizer(torch.nn.Module):
-    def __init__(self, config, Generator, device: torch.device):
+    def __init__(self, config, Generator, device=torch.device):
         super().__init__()
         self.config = config
 
