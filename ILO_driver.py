@@ -292,7 +292,7 @@ class LatentOptimizer(torch.nn.Module):
         loss_fcn = nn.MSELoss()
 
         for step in range(num_steps):
-            gen_img = self.G(z_init, c=None, noise_mode='const')
+            gen_img = torch.squeeze(self.G(z_init, c=None, noise_mode='const'))
             #gen_exc = ISETBio[]
             gen_exc = gen_img
 
@@ -303,7 +303,7 @@ class LatentOptimizer(torch.nn.Module):
 
         z_hat_k = z_init
 
-        return z_hat_k
+        return z_hat_k, gen_img
 
 
     def reconstruct(self, target_image):
@@ -317,7 +317,11 @@ class LatentOptimizer(torch.nn.Module):
 
 
         #Get z_hat, step one in Algo1 ILO Paper
-        self.z_hat_k = self.step1(target_exc)
+        self.z_hat_k, img2 = self.step1(target_exc)
+
+        print('Saving image')
+        img1 = Image.fromarray(img2.T.cpu().numpy(), 'RGB')
+        img1.save('out.png')
 
         #Replace with block resolution
         res_lst = self.G.synthesis.block_resolutions
