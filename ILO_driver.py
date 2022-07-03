@@ -320,7 +320,7 @@ class LatentOptimizer(torch.nn.Module):
         self.z_hat_k, img2 = self.step1(target_exc)
 
         print('Saving image')
-        img1 = Image.fromarray(img2.T.detach().numpy(), 'RGB')
+        img1 = Image.fromarray(img2.T.detach().cpu().numpy(), 'RGB')
         img1.save('out.png')
 
         #Replace with block resolution
