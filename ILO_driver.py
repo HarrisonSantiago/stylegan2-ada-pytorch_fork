@@ -298,9 +298,9 @@ class LatentOptimizer(torch.nn.Module):
 
             #gen_exc = ISETBio[]
             gen_exc = gen_img
-
-            #loss = loss_fcn(gen_exc[0], target_exc)
-            loss = (target_exc - gen_exc[0]).square().sum()
+            print('shape: ', gen_exc.shape)
+            loss = loss_fcn(gen_exc[0], target_exc)
+            #loss = (target_exc - gen_exc[0]).square().sum()
             print('step: ', step, ', loss: ', loss)
             loss.backward()
             optimizer.step()
@@ -326,9 +326,10 @@ class LatentOptimizer(torch.nn.Module):
 
         print('Saving image')
 
-        img = (img2.permute(0, 2, 3, 1))
-        Image.fromarray(img[0].cpu().numpy(), 'RGB').save('test3.png')
-
+        img = self.G(self.z_hat_k, None)
+        print(img.shape)
+        img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+        Image.fromarray(img[0].cpu().numpy(), 'RGB').save('test2.png')
 
         #Replace with block resolution
         res_lst = self.G.synthesis.block_resolutions
