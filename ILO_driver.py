@@ -299,7 +299,8 @@ class LatentOptimizer(torch.nn.Module):
             #gen_exc = ISETBio[]
             gen_exc = gen_img
 
-            loss = loss_fcn(gen_exc[0], target_exc)
+            #loss = loss_fcn(gen_exc[0], target_exc)
+            loss = (target_exc - gen_exc[0]).square().sum()
             print('step: ', step, ', loss: ', loss)
             loss.backward()
             optimizer.step()
