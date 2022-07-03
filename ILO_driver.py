@@ -294,7 +294,7 @@ class LatentOptimizer(torch.nn.Module):
         for step in range(num_steps):
             gen_img = self.G(z_init, c=None, noise_mode='const')
 
-            gen_img = (gen_img * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+            gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
             #gen_exc = ISETBio[]
             gen_exc = gen_img
