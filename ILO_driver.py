@@ -285,11 +285,13 @@ class LatentOptimizer(torch.nn.Module):
 
         #Driver for the whole thing, this used to also be called invert
 
-    def step1(self, target_exc, num_steps = 1000, w_avg_samples = 10000,initial_learning_rate = 0.1):
+    def step1(self, target_exc, num_steps = 5000, w_avg_samples = 10000,initial_learning_rate = 0.1):
         z_init = torch.randn([1, self.G.z_dim], dtype = torch.float32, device = "cuda", requires_grad=True).cuda()
         print(type(z_init))
         optimizer = torch.optim.Adam([z_init], lr = initial_learning_rate)
         loss_fcn = nn.MSELoss()
+
+        mse_min = np.inf
 
         for step in range(num_steps):
             gen_img = self.G(z_init, c=None, noise_mode='const')
@@ -305,6 +307,10 @@ class LatentOptimizer(torch.nn.Module):
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
+
+            if loss < mse_min:
+                mse_min = loss
+                self.best_z = z_init
 
         z_hat_k = z_init
 
@@ -326,7 +332,7 @@ class LatentOptimizer(torch.nn.Module):
 
         print('Saving image')
 
-        img = self.G(self.z_hat_k, None)
+        img = self.G(self.best_z, None)
         print(img.shape)
         img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
         Image.fromarray(img[0].cpu().numpy(), 'RGB').save('test2.png')
