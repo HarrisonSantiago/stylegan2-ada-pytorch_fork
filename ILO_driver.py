@@ -324,8 +324,10 @@ class LatentOptimizer(torch.nn.Module):
         self.z_hat_k, img2 = self.step1(target_exc)
 
         print('Saving image')
-        img1 = Image.fromarray(img2.T.detach().cpu().numpy(), 'RGB')
-        img1.save('out.png')
+
+        img = (img2.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+        PIL.Image.fromarray(img[0].cpu().numpy(), 'RGB').save('test3.png')
+
 
         #Replace with block resolution
         res_lst = self.G.synthesis.block_resolutions
