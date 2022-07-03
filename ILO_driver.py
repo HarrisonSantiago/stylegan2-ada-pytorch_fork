@@ -75,7 +75,7 @@ class LatentOptimizer(torch.nn.Module):
 
         #TODO: replace this mapping proxy with the mapping in ada
 
-        self.percept = lpips.PerceptualLoss(model="net-lin", net="vgg",
+        #self.percept = lpips.PerceptualLoss(model="net-lin", net="vgg",
                                             use_gpu=device.startswith("cuda"))
         self.init_state()
 
