@@ -132,6 +132,8 @@ class LatentOptimizer(torch.nn.Module):
             optimizer4.step()
             optimizer4.zero_grad()
 
+            img.detach_()
+
 
             if loss < mse_min:
                 mse_min = loss
@@ -221,8 +223,7 @@ class LatentOptimizer(torch.nn.Module):
                 print('running synth')
                 block = getattr(self.G.synthesis, f'b{res}')
                 z_k, img = block(z_k, img, cur_ws, {})
-                z_k.detach_()
-                img.detach_()
+
 
             if res == start_res:
                 start = True
