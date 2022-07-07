@@ -185,8 +185,7 @@ class LatentOptimizer(torch.nn.Module):
                 block = getattr(self.G.synthesis, f'b{res}')
                 block_ws.append(ws.narrow(1, w_idx, block.num_conv + block.num_torgb))
                 w_idx += block.num_conv
-                if res == end_res:
-                    break
+
 
         z = img = None
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
@@ -230,6 +229,7 @@ class LatentOptimizer(torch.nn.Module):
         for i in pbar:
 
             #step 4
+            #Does w need to be redone for the z_p
             z_p_sq , z_p_sq_im, loss = self.step4(block_ws, z_p_hat, z_p_hat_img, target_exc, current_res, i+1)
 
             if loss < mse_max:
