@@ -115,9 +115,7 @@ class LatentOptimizer(torch.nn.Module):
         mse_min = np.inf
         for _ in range(steps):
 
-            img_n = gen_img
-
-            z, img = self.run_G2(block_ws, z_p, img_n, start_res)
+            z, img = self.run_G2(block_ws, z_p, gen_img, start_res)
 
 
             img = (img * 127.5 + 128).clamp(0, 255)
