@@ -117,10 +117,12 @@ class LatentOptimizer(torch.nn.Module):
 
             z, gen_img = self.run_G2(block_ws, z, img, start_res)
 
+            gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
+
             # int_cone_exc = ISETBIO(gen_img)
             int_cone_exc = img
 
-            loss = loss_fcn(int_cone_exc, target_exc)
+            loss = loss_fcn(int_cone_exc[0], target_exc)
 
             optimizer4.zero_grad()
             loss.backward()
