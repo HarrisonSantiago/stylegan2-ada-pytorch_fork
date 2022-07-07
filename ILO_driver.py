@@ -114,10 +114,10 @@ class LatentOptimizer(torch.nn.Module):
         loss_tracker = []
         mse_min = np.inf
         for _ in range(steps):
-            z = z_p
+
             img = gen_img
 
-            z, img = self.run_G2(block_ws, z, img, start_res)
+            z, img = self.run_G2(block_ws, z_p, img, start_res)
 
 
             img = (img * 127.5 + 128).clamp(0, 255)
