@@ -12,6 +12,7 @@ import lpips
 torch.set_printoptions(precision=5)
 from torch import nn
 import matplotlib.pyplot as plt
+from torch_utils import misc
 
 from utils import *
 import copy
@@ -172,7 +173,7 @@ class LatentOptimizer(torch.nn.Module):
 
         block_ws = []
         with torch.autograd.profiler.record_function('split_ws'):
-            nn.misc.assert_shape(ws, [None, self.num_ws, self.w_dim])
+            misc.assert_shape(ws, [None, self.num_ws, self.w_dim])
             ws = ws.to(torch.float32)
             w_idx = 0
             for res in self.block_resolutions:  # up to certain layer
@@ -240,7 +241,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
 
-    def step1(self, target_exc, num_steps = 5000, initial_learning_rate = 0.1):
+    def step1(self, target_exc, num_steps = 500, initial_learning_rate = 0.1):
         print('--- step 1 ---')
         loss_tracker = []
 
