@@ -222,6 +222,7 @@ class LatentOptimizer(torch.nn.Module):
                 block = getattr(self.G.synthesis, f'b{res}')
                 z_k, img = block(z_k, img, cur_ws, {})
                 z_k.detach_()
+                img.detach_()
 
             if res == start_res:
                 start = True
