@@ -199,7 +199,7 @@ class LatentOptimizer(torch.nn.Module):
         start = False
         z = z_k
         img = gen_img
-        for res, cur_ws in zip(self.G.sythesis.block_resolutions, block_ws):
+        for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
 
             if start:
                 block = getattr(self.G.synthesis, f'b{res}')
