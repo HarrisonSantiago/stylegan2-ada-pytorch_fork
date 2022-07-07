@@ -111,21 +111,23 @@ class LatentOptimizer(torch.nn.Module):
         loss_fcn = nn.MSELoss()
 
         steps = 250
+        loss_tracker = []
         for _ in range(steps):
             z = z_p
             img = gen_img
 
-            z, gen_img = self.run_G2(block_ws, z, img, start_res)
+            z, img = self.run_G2(block_ws, z, img, start_res)
 
-            gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
+            img = (img * 127.5 + 128).clamp(0, 255)
 
             # int_cone_exc = ISETBIO(gen_img)
-            int_cone_exc = gen_img
+            int_cone_exc = img
 
             print('target_size:', target_exc.shape)
             print('cone exc shape: ', int_cone_exc.shape )
             loss = loss_fcn(int_cone_exc[0], target_exc)
 
+            loss_tracker.append(loss.detach().cpu())
             optimizer4.zero_grad()
             loss.backward()
             optimizer4.step()
@@ -136,6 +138,15 @@ class LatentOptimizer(torch.nn.Module):
                 best_img = gen_img
 
         #4 project to l1 ball
+
+        y = np.array(loss_tracker)
+        x = np.arange(len(y))
+
+        plt.plot(x, y)
+        plt.xlabel('steps')
+        plt.ylabel('loss')
+        plt.title('Step 4')
+        plt.show()
 
 
         return best_z, best_img, mse_min
