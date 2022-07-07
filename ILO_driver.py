@@ -265,7 +265,7 @@ class LatentOptimizer(torch.nn.Module):
 
             #loss = (target_exc - gen_exc[0]).square().sum()
             print('step: ', step, ', loss: ', loss)
-            loss_tracker.append(loss.cpu())
+            loss_tracker.append(loss.detach().cpu())
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
