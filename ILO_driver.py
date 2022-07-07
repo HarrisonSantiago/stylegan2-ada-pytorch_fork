@@ -97,211 +97,170 @@ class LatentOptimizer(torch.nn.Module):
 
 
     def get_lr(self, t, initial_lr, rampdown=0.75, rampup=0.05):
-		# Defines the learning rate, don't remember this from paper but seems good enough
         lr_ramp = min(1, (1 - t) / rampdown)
         lr_ramp = 0.5 - 0.5 * math.cos(lr_ramp * math.pi)
         lr_ramp = lr_ramp * min(1, t / rampup)
         return initial_lr * lr_ramp
 
+    def step4(self, block_ws, z_p, gen_img, target_exc, start_res, radius):
+        lr = 0.05
+        optimizer4 = optim.Adam([z_p], lr=lr)
+        loss_fcn = nn.MSELoss()
 
-    def invert_(self, start_layer, target_exc, steps, index, end_block_res):
-        #keep
-        learning_rate = self.config['lr'][index]
-        print(f"Running round {index + 1} / {len(self.config['steps'])} of ILO.")
+        steps = 250
+        for _ in range(steps):
+            z = z_p
+            img = gen_img
 
+            z, gen_img = self.run_G2(block_ws, z, img, start_res)
 
-        #BEGINNING STUFF TO WORK THROUGH
-
-        with torch.no_grad():
-            if start_layer == 0:
-                # var_list is the paramaters Adam optimizes over
-                var_list = [self.z_hat_k]
-                self.int_zs[None] #intermediate z's
-            else:
-                # TODO: what are gen_outs?
-                #They are intermediate projections... Is this the proj back step?
-                #Takes care of the function comp
-                self.int_zs[-1].requires_grad = True
-                # var_list is the paramaters Adam optimizes over
-                var_list = [self.z_hat_k] + [self.int_zs[-1]]
-                prev_gen_out = torch.ones(self.gen_outs[-1].shape, device=self.gen_outs[-1].device) * self.gen_outs[-1]
-
-            # These can be used for the mapping back I think
-            prev_latent = torch.ones(self.z_hat_k.shape, device=self.z_hat_k.device) * self.z_hat_k
-
-
-            # set network that we will be optimizing over
-            self.gen.start_layer = start_layer
-            self.gen.end_layer = self.config['end_layer']
-
-
-        optimizer = optim.Adam(var_list, lr=learning_rate)
-        ps = SphericalOptimizer([self.latent_z])
-
-
-        self.current_step += steps
-
-            # 6.2 Set losses
-
-        mse_min = np.inf
-        mse_loss = 0
-        p_loss = 0
-
-
-            # 6.3 Start optimizing step by step
-        pbar = tqdm(range(steps))
-        for i in pbar:  # aka for each step
-            loss = 0
-            t = i / steps
-
-            lr = self.get_lr(t, learning_rate)
-            optimizer.param_groups[0]["lr"] = lr
-
-
-            #latent_w = self.G.mapping(self.latent_z, None)
-            #img_gen= self.G.synthesis(latent_w, noise_mode ='const')
-
-            block_ws = []
-            with torch.autograd.profiler.record_function('split_ws'):
-                nn.misc.assert_shape(ws, [None, self.num_ws, self.w_dim])
-                ws = ws.to(torch.float32)
-                w_idx = 0
-                for res in self.block_resolutions:  # up to certain layer
-                    block = getattr(self, f'b{res}')
-                    block_ws.append(ws.narrow(1, w_idx, block.num_conv + block.num_torgb))
-                    w_idx += block.num_conv
-
-            x = img = None
-            i = 0
-            for res, cur_ws in zip(self.block_resolutions, block_ws):
-                if res == end_block_res:
-                    break
-                else:
-                    block = getattr(self, f'b{res}')
-                    int_z, int_gen_img = block(x, img, cur_ws, {})
-                self.int_zs.append(int_z)
-
-            #int_cone_exc = ISETBIO(int_gen_img)
-            int_cone_exc = int_gen_img
-
-            loss_fcn = nn.MSELoss()
+            # int_cone_exc = ISETBIO(gen_img)
+            int_cone_exc = img
 
             loss = loss_fcn(int_cone_exc, target_exc)
 
-            optimizer.zero_grad()
+            optimizer4.zero_grad()
             loss.backward()
-            optimizer.step()
+            optimizer4.step()
 
-            # This would be where the ISETBio stuff comes in, right after this
+            if loss < mse_min:
+                mse_min = loss
+                best_z = z
+                best_img = gen_img
 
-            # 6.4  Create ISETBio cone excitations for the gen image
-
-
-            # 6.5 Loss function time
-
-
+        #4 project to l1 ball
 
 
-            # compute loss
-            #diff = torch.abs(cone_gen - self.original_imgs) - self.config['dead_zone_linear_alpha']
-            #loss += self.config['dead_zone_linear'][index] * torch.max(torch.zeros(diff.shape, device=diff.device),
-            #                                                           diff).mean()
-#
-            #mse_loss = F.mse_loss(cone_gen, self.original_imgs)
-#
-            #loss += self.config['mse'][index] * mse_loss
-            #if self.config['pe'][index] != 0:
-            #    if self.config['lpips_method'] == 'mask':
-            #        p_loss = self.percept(self.downsampler_image_256(masked),
-            #                              self.downsampler_image_256(self.original_imgs)).mean()
-            #    elif self.config['lpips_method'] == 'fill':
-            #        filled = mask * self.original_imgs + (1 - mask) * downsampled
-            #        p_loss = self.percept(self.downsampler_1024_256(img_gen), self.downsampler_image_256(filled)).mean()
-            #    else:
-            #        raise NotImplementdError('LPIPS policy not implemented')
-#
-            #loss += self.config['pe'][index] * p_loss
-#
-            #loss += self.config['geocross'] * loss_geocross(self.latent_z[2 * start_layer:])
-#
-#
-            #optimizer.zero_grad()
-            #loss.backward()
-            #optimizer.step()
-#
-            if self.project:
-                # Step the sphericalOptimizer TODO: what does this do
-                ps.step()
+        return best_z, best_img, mse_min
 
-            # WILL PROBABLY WANT TO MAKE THESE TRUE, Pg 14 in paper says they do these
-            if start_layer != 0 and self.config['do_project_gen_out']:
-                deviation = project_onto_l1_ball(self.gen_outs[-1] - prev_gen_out,
-                                                 self.config['max_radius_gen_out'][index])
-                var_list[-1].data = (prev_gen_out + deviation).data
-            if start_layer != 0 and self.config['do_project_latent']:
-                deviation = project_onto_l1_ball(self.z_hat_k - prev_latent,
-                                                 self.config['max_radius_latent'][index])
-                var_list[0].data = (prev_latent + deviation).data
+    def step5(self, z_p_sq,  current_res, initial_learning_rate = 0.05):
+        print('--- starting step 5 ---')
 
-            if mse_loss < mse_min:
-                mse_min = mse_loss
-                self.best = int_gen_img.detach().cpu()
+        num_steps = 100
 
-            pbar.set_description(
-                (
-                    f"perceptual: {p_loss:.4f};"
-                    f" mse: {mse_loss:.4f};"
-                )
-            )
+        z_k = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
-        # 8. Get optimal z  and img? for the layer
+        optimizer5 = torch.optim.Adam([z_k], lr=initial_learning_rate)
+
+        loss_min = np.inf
+
+        for step in range(num_steps):
+
+            _, z, gen_img = self.run_G1(z, current_res)
+
+            loss = np.sum(np.square(z - z_p_sq))
+
+            print('loss: ', loss)
+            optimizer5.zero_grad()
+            loss.backward()
+            optimizer5.step()
+
+            if (loss < loss_min):
+                loss_min = loss
+                z_k_hat = z
+                img = gen_img
 
 
 
-        ##LEFT OVER
+        return z_k_hat, img
+
+
+    def run_G1(self, z_k,  end_res):
+
+        ws = self.G.mapping(z_k, None, truncation_psi=1, truncation_cutoff = None)
+
+        block_ws = []
+        with torch.autograd.profiler.record_function('split_ws'):
+            nn.misc.assert_shape(ws, [None, self.num_ws, self.w_dim])
+            ws = ws.to(torch.float32)
+            w_idx = 0
+            for res in self.block_resolutions:  # up to certain layer
+                block = getattr(self, f'b{res}')
+                block_ws.append(ws.narrow(1, w_idx, block.num_conv + block.num_torgb))
+                w_idx += block.num_conv
+                if res == end_res:
+                    break
+
+        z = img = None
+        for res, cur_ws in zip(self.block_resolutions, block_ws):
+            block = getattr(self, f'b{res}')
+            z, img = block(z, img, cur_ws, {})
+
+            if res == end_res:
+                break
+
+        return block_ws, z, img #this is some z_p
+
+    def run_G2(self, block_ws, z_k, gen_img, start_res):
+
+        start = False
+        z = z_k
+        img = gen_img
+        for res, cur_ws in zip(self.block_resolutions, block_ws):
+
+            if start:
+                block = getattr(self, f'b{res}')
+                z, img = block(z, img, cur_ws, {})
+
+            if res == start_res:
+                start = True
+
+
+        return z, gen_img #completed image
+
+
+    def invert_(self, z_k_hat, z_k_hat_img, target_exc, current_res, radius = 250):
+        #step 2
+        block_ws, z_p_hat, z_p_hat_img = self.run_G1(z_k_hat, current_res)
+
+
+        #steps 3-6
+        radius = 100
+        pbar = tqdm(range(radius))
+        mse_max = np.inf
+        for i in pbar:
+
+            #step 4
+            z_p_sq , z_p_sq_im, loss = self.step4(block_ws, z_p_hat, z_p_hat_img, target_exc, current_res, i+1)
+
+            if loss < mse_max:
+                mse_max = loss
+
+                #step 5
+                z_k_hat, img = self.step5(z_p_sq, z_k_hat, z_k_hat_img, current_res)
+
+                #step 6
+
+                block_ws, z_p_hat, img = self.run_G1(z_k_hat, current_res)
+
+
+        return block_ws, z_p_hat, img
 
 
 
 
+    def step1(self, target_exc, num_steps = 5000, initial_learning_rate = 0.1):
+        print('--- step 1 ---')
 
+        z_k = torch.randn([1, self.G.z_dim], dtype = torch.float32, device = "cuda", requires_grad=True).cuda()
 
+        print('step 1 z_k_hat shape: ', z_k.shape)
 
-
-
-
-
-        # TODO: check what happens when we are in the last layer
-	  # No longer in the for loop, this only happens once per starting layer
-      # with torch.no_grad():
-      #     latent_w = self.mpl(self.latent_z)
-      #     self.gen.end_layer = self.gen.start_layer
-      #     intermediate_out, _  = self.gen([latent_w],
-      #                                      input_is_latent=True,
-      #                                      noise=self.noises,
-      #                                      layer_in=self.gen_outs[-1],
-      #                                      skip=None)
-      #     self.gen_outs.append(intermediate_out)
-      #     self.gen.end_layer = self.config['end_layer']
-
-        #Driver for the whole thing, this used to also be called invert
-
-    def step1(self, target_exc, num_steps = 5000, w_avg_samples = 10000,initial_learning_rate = 0.1):
-        z_init = torch.randn([1, self.G.z_dim], dtype = torch.float32, device = "cuda", requires_grad=True).cuda()
-        print(type(z_init))
-        optimizer = torch.optim.Adam([z_init], lr = initial_learning_rate)
+        optimizer = torch.optim.Adam([z_k], lr = initial_learning_rate)
         loss_fcn = nn.MSELoss()
 
         mse_min = np.inf
 
         for step in range(num_steps):
-            gen_img = self.G(z_init, c=None, noise_mode='const')
-
+            gen_img = self.G(z_k, c=None, noise_mode='const')
             gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
             #gen_exc = ISETBio[]
             gen_exc = gen_img
+
             print('shape: ', gen_exc.shape)
             loss = loss_fcn(gen_exc[0], target_exc)
+
             #loss = (target_exc - gen_exc[0]).square().sum()
             print('step: ', step, ', loss: ', loss)
             loss.backward()
@@ -310,42 +269,39 @@ class LatentOptimizer(torch.nn.Module):
 
             if loss < mse_min:
                 mse_min = loss
-                self.best_z = z_init
+                z_k_hat = z_k
 
-        z_hat_k = z_init
+        return z_k_hat, gen_img
 
-        return z_hat_k, gen_img
+    def genToPng(self, gen_img):
+        #turns it from something that G(z,c) outputs, into a png savable format
+        img = (gen_img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
+        im = Image.fromarray(img[0].cpu().numpy(), 'RGB')
 
+        return im
 
     def reconstruct(self, target_image):
-        print('Running with the following config....')
-        pretty(self.config)
+        #print('Running with the following config....')
+        #pretty(self.config)
 
-        #GET CONE EXCITATIONS FROM ISETBIO
         #target_exc = []
-        #TO TEST WITH NO EXC
         target_exc = target_image
 
+        #step 1
+        z_k_hat, img = self.step1(target_exc)
 
-        #Get z_hat, step one in Algo1 ILO Paper
-        self.z_hat_k, img2 = self.step1(target_exc)
-
+        #Can remove later
         print('Saving image')
+        img = self.G(z_k_hat, None)
+        im = self.genToPng(img)
+        im.save('test2.png')
 
-        img = self.G(self.best_z, None)
-        print(img.shape)
-        img = (img.permute(0, 2, 3, 1) * 127.5 + 128).clamp(0, 255).to(torch.uint8)
-        Image.fromarray(img[0].cpu().numpy(), 'RGB').save('test2.png')
-
-        #Replace with block resolution
+        #This is how we get the layers to go over
         res_lst = self.G.synthesis.block_resolutions
 
-        for i, steps in enumerate(self.config['steps']):
-            #is is current layer, steps is steps per layer
+        for i, res in enumerate(res_lst):
+            print('starting layer ', i, 'with a resolution of ', str(res))
+            block_ws, z_k_hat, gen_img = self.invert_(z_k_hat, gen_img, target_exc, res)
 
-            begin_from = i + self.config['start_layer']
-            if begin_from > self.config['end_layer']:
-                raise Exception('Attempting to go after end layer...')
-            self.invert_(begin_from, target_exc, int(steps), i, res_lst[i])
-
+        print('outputting best image')
         return target_image, (self.latent_z, self.noises, self.gen_outs), self.best
