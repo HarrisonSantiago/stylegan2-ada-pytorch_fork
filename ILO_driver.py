@@ -115,9 +115,9 @@ class LatentOptimizer(torch.nn.Module):
         mse_min = np.inf
         for _ in range(steps):
 
-            img = gen_img
+            img_n = gen_img
 
-            z, img = self.run_G2(block_ws, z_p, img, start_res)
+            z, img = self.run_G2(block_ws, z_p, img_n, start_res)
 
 
             img = (img * 127.5 + 128).clamp(0, 255)
@@ -215,20 +215,20 @@ class LatentOptimizer(torch.nn.Module):
 
         print('z_k shape: ', z_k.shape)
         start = False
-        z = z_k
+
         img = gen_img
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             print('cur res: ', res)
             if start:
                 print('running synth')
                 block = getattr(self.G.synthesis, f'b{res}')
-                z, img = block(z, img, cur_ws, {})
+                z_k, img = block(z_k, img, cur_ws, {})
 
             if res == start_res:
                 start = True
 
 
-        return z, img #completed image
+        return z_k, img #completed image
 
 
     def invert_(self, z_k_hat, z_k_hat_img, target_exc, current_res, radius = 250):
