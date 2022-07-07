@@ -112,6 +112,7 @@ class LatentOptimizer(torch.nn.Module):
 
         steps = 250
         loss_tracker = []
+        mse_min = np.inf
         for _ in range(steps):
             z = z_p
             img = gen_img
