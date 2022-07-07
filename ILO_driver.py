@@ -122,6 +122,8 @@ class LatentOptimizer(torch.nn.Module):
             # int_cone_exc = ISETBIO(gen_img)
             int_cone_exc = gen_img
 
+            print('target_size:', target_exc.shape)
+            print('cone exc shape: ', int_cone_exc.shape )
             loss = loss_fcn(int_cone_exc[0], target_exc)
 
             optimizer4.zero_grad()
