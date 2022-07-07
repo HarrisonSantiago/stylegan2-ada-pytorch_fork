@@ -11,6 +11,7 @@ import torch.nn as nn
 import lpips
 torch.set_printoptions(precision=5)
 from torch import nn
+import matplotlib.pyplot as plt
 
 from utils import *
 import copy
@@ -241,6 +242,7 @@ class LatentOptimizer(torch.nn.Module):
 
     def step1(self, target_exc, num_steps = 5000, initial_learning_rate = 0.1):
         print('--- step 1 ---')
+        loss_tracker = []
 
         z_k = torch.randn([1, self.G.z_dim], dtype = torch.float32, device = "cuda", requires_grad=True).cuda()
 
@@ -263,6 +265,7 @@ class LatentOptimizer(torch.nn.Module):
 
             #loss = (target_exc - gen_exc[0]).square().sum()
             print('step: ', step, ', loss: ', loss)
+            loss_tracker.append(loss)
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
@@ -271,6 +274,13 @@ class LatentOptimizer(torch.nn.Module):
                 mse_min = loss
                 z_k_hat = z_k
 
+        y = np.array(loss_tracker)
+        x = np.arange(len(y))
+
+        plt.plot(x, y)
+        plt.xlabel('steps')
+        plt.ylabel('loss')
+        plt.show()
         return z_k_hat, gen_img
 
     def genToPng(self, gen_img):
@@ -301,7 +311,7 @@ class LatentOptimizer(torch.nn.Module):
 
         for i, res in enumerate(res_lst):
             print('starting layer ', i, 'with a resolution of ', str(res))
-            block_ws, z_k_hat, gen_img = self.invert_(z_k_hat, gen_img, target_exc, res)
+            block_ws, z_k_hat, gen_img = self.invert_(z_k_hat, img, target_exc, res)
 
         print('outputting best image')
-        return target_image, (self.latent_z, self.noises, self.gen_outs), self.best
+        return z_k_hat, target_image
