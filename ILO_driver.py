@@ -113,8 +113,9 @@ class LatentOptimizer(torch.nn.Module):
         steps = 250
         loss_tracker = []
         mse_min = np.inf
+        z = img = None
         for _ in range(steps):
-
+            img.detach_()
             z, img = self.run_G2(block_ws, z_p, gen_img, start_res)
 
 
@@ -132,7 +133,7 @@ class LatentOptimizer(torch.nn.Module):
             optimizer4.step()
             optimizer4.zero_grad()
 
-            img.detach_()
+
 
 
             if loss < mse_min:
