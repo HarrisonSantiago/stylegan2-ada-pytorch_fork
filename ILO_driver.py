@@ -176,16 +176,16 @@ class LatentOptimizer(torch.nn.Module):
             misc.assert_shape(ws, [None, self.G.num_ws, self.G.w_dim])
             ws = ws.to(torch.float32)
             w_idx = 0
-            for res in self.G.block_resolutions:  # up to certain layer
-                block = getattr(self.G, f'b{res}')
+            for res in self.G.synthesis.block_resolutions:  # up to certain layer
+                block = getattr(self.G.synthesis, f'b{res}')
                 block_ws.append(ws.narrow(1, w_idx, block.num_conv + block.num_torgb))
                 w_idx += block.num_conv
                 if res == end_res:
                     break
 
         z = img = None
-        for res, cur_ws in zip(self.G.block_resolutions, block_ws):
-            block = getattr(self.G, f'b{res}')
+        for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
+            block = getattr(self.G.synthesis, f'b{res}')
             z, img = block(z, img, cur_ws, {})
 
             if res == end_res:
