@@ -200,12 +200,14 @@ class LatentOptimizer(torch.nn.Module):
 
     def run_G2(self, block_ws, z_k, gen_img, start_res):
 
+        print('z_k shape: ', z_k.shape)
         start = False
         z = z_k
         img = gen_img
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
-
+            print('cur res: ', res)
             if start:
+                print('running synth')
                 block = getattr(self.G.synthesis, f'b{res}')
                 z, img = block(z, img, cur_ws, {})
 
