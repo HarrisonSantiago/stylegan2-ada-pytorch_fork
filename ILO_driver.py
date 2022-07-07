@@ -118,6 +118,7 @@ class LatentOptimizer(torch.nn.Module):
 
             z, img = self.run_G2(block_ws, z, img, start_res)
 
+
             img = (img * 127.5 + 128).clamp(0, 255)
 
             # int_cone_exc = ISETBIO(gen_img)
@@ -225,7 +226,7 @@ class LatentOptimizer(torch.nn.Module):
                 start = True
 
 
-        return z, gen_img #completed image
+        return z, img #completed image
 
 
     def invert_(self, z_k_hat, z_k_hat_img, target_exc, current_res, radius = 250):
