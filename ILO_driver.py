@@ -130,9 +130,10 @@ class LatentOptimizer(torch.nn.Module):
             loss = loss_fcn(int_cone_exc[0], target_exc)
 
             loss_tracker.append(loss.detach().cpu())
-            optimizer4.zero_grad()
             loss.backward()
             optimizer4.step()
+            optimizer4.zero_grad()
+
 
             if loss < mse_min:
                 mse_min = loss
