@@ -249,7 +249,7 @@ class LatentOptimizer(torch.nn.Module):
                 mse_max = loss
 
                 #step 5
-                z_k_hat, img = self.step5(z_p_sq, z_k_hat, z_k_hat_img, current_res)
+                z_k_hat, img = self.step5(z_p_sq, current_res)
 
                 #step 6
 
