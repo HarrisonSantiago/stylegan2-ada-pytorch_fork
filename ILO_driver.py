@@ -151,20 +151,20 @@ class LatentOptimizer(torch.nn.Module):
 
         return best_z, best_img, mse_min
 
-    def step5(self, z_p_sq,  current_res, initial_learning_rate = 0.05):
+    def step5(self, z_p_sq, z_k,  current_res, initial_learning_rate = 0.05):
         print('--- starting step 5 ---')
 
         num_steps = 100
 
-        z = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
+        #z = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
-        optimizer5 = torch.optim.Adam([z], lr=initial_learning_rate)
+        optimizer5 = torch.optim.Adam([z_k], lr=initial_learning_rate)
 
         loss_min = np.inf
 
         for step in range(num_steps):
             print('cur res: ', current_res)
-            _, z, gen_img = self.run_G1(z, current_res)
+            _, z, gen_img = self.run_G1(z_k, current_res)
 
             print('z shape: ', z.shape)
             print('z_k_hat shape: ', z_p_sq.shape )
@@ -250,7 +250,7 @@ class LatentOptimizer(torch.nn.Module):
                 mse_max = loss
 
                 #step 5
-                z_k_hat, img = self.step5(z_p_sq, current_res)
+                z_k_hat, img = self.step5(z_p_sq, z_k_hat, current_res)
 
                 #step 6
 
