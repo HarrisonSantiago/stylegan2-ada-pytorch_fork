@@ -157,9 +157,9 @@ class LatentOptimizer(torch.nn.Module):
 
         num_steps = 100
 
-        z_k = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
+        z = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
-        optimizer5 = torch.optim.Adam([z_k], lr=initial_learning_rate)
+        optimizer5 = torch.optim.Adam([z], lr=initial_learning_rate)
 
         loss_min = np.inf
 
