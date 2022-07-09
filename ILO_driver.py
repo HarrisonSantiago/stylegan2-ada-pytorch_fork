@@ -115,7 +115,7 @@ class LatentOptimizer(torch.nn.Module):
         loss_tracker = []
         mse_min = np.inf
         for _ in range(steps):
-
+            holder = z_p
             z, img = self.run_G2(block_ws, z_p, gen_img, start_res)
 
 
@@ -124,8 +124,6 @@ class LatentOptimizer(torch.nn.Module):
             # int_cone_exc = ISETBIO(gen_img)
             int_cone_exc = img
 
-            print('target_size:', target_exc.shape)
-            print('cone exc shape: ', int_cone_exc.shape )
             loss = loss_fcn(int_cone_exc[0], target_exc)
 
             loss_tracker.append(loss.detach().cpu())
@@ -135,7 +133,8 @@ class LatentOptimizer(torch.nn.Module):
 
             if loss < mse_min:
                 mse_min = loss
-                best_z = z
+                #best_z = z
+                best_z = holder
                 best_img = gen_img
 
         #4 project to l1 ball
@@ -213,14 +212,13 @@ class LatentOptimizer(torch.nn.Module):
 
     def run_G2(self, block_ws, z_k, gen_img, start_res):
 
-        print('z_k shape: ', z_k.shape)
+        #print('z_k shape: ', z_k.shape)
         start = False
 
 
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
-            print('cur res: ', res)
             if start:
-                print('running synth')
+                #print('running synth')
                 block = getattr(self.G.synthesis, f'b{res}')
                 z_k, gen_img = block(z_k, gen_img, cur_ws, {})
 
@@ -246,7 +244,8 @@ class LatentOptimizer(torch.nn.Module):
             #step 4
             #Does w need to be redone for the z_p
             z_p_sq , z_p_sq_im, loss = self.step4(block_ws, z_p_hat, z_p_hat_img, target_exc, current_res, i+1)
-
+            print('cur res in invert: ', current_res)
+            print(' after step 4, z_p_sq is: ', z_p_sq.shape)
             if loss < mse_max:
                 mse_max = loss
 
