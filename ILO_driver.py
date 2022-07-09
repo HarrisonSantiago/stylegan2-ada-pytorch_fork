@@ -168,7 +168,7 @@ class LatentOptimizer(torch.nn.Module):
 
             print('z shape: ', z.shape)
             print('z_k_hat shape: ', z_p_sq.shape )
-            loss = np.sum(np.square(z - z_p_sq))
+            loss = torch.sum(torch.square(z - z_p_sq))
 
             print('loss: ', loss)
             optimizer5.zero_grad()
