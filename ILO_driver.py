@@ -232,6 +232,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
     def invert_(self, z_k_hat, z_k_hat_img, target_exc, current_res, radius = 250):
+        torch.autograd.set_detect_anomaly(True)
         #step 2
         block_ws, z_p_hat, z_p_hat_img = self.run_G1(z_k_hat, current_res)
 
