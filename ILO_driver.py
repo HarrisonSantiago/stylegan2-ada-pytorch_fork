@@ -167,6 +167,8 @@ class LatentOptimizer(torch.nn.Module):
 
             _, z, gen_img = self.run_G1(z, current_res)
 
+            print('z shape: ', z.shape)
+            print('z_k_hat shape: ', z_k_hat.shape )
             loss = np.sum(np.square(z - z_p_sq))
 
             print('loss: ', loss)
