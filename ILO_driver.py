@@ -177,7 +177,7 @@ class LatentOptimizer(torch.nn.Module):
 
             if (loss < loss_min):
                 loss_min = loss
-                z_k_hat = z
+                z_k_hat = z_k
                 img = gen_img
 
 
