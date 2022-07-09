@@ -211,7 +211,7 @@ class LatentOptimizer(torch.nn.Module):
         return block_ws, z, img #this is some z_p
 
     def run_G2(self, block_ws, z_k, gen_img, start_res):
-
+        z_k = z_k.detach().clone()
         #print('z_k shape: ', z_k.shape)
         start = False
 
