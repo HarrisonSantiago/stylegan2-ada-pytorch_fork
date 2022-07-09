@@ -164,11 +164,11 @@ class LatentOptimizer(torch.nn.Module):
         loss_min = np.inf
 
         for step in range(num_steps):
-
+            print('cur res: ', current_res)
             _, z, gen_img = self.run_G1(z, current_res)
 
             print('z shape: ', z.shape)
-            print('z_k_hat shape: ', z_k_hat.shape )
+            print('z_k_hat shape: ', z_p_sq.shape )
             loss = np.sum(np.square(z - z_p_sq))
 
             print('loss: ', loss)
