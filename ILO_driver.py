@@ -166,7 +166,6 @@ class LatentOptimizer(torch.nn.Module):
 
         for step in range(num_steps):
             print('cur res: ', current_res)
-            #_, z, gen_img = self.run_G1(z_k.clone(), current_res)
             _, z, gen_img = self.run_G1(z_k, current_res)
 
             print('z shape: ', z.shape)
@@ -193,7 +192,6 @@ class LatentOptimizer(torch.nn.Module):
         holder = torch.ones(z_k.shape, device = "cuda", requires_grad = True)
         holder = holder * z_k.clone()
         ws = self.G.mapping(holder, None, truncation_psi=1, truncation_cutoff = None)
-        #ws = self.G.mapping(z_k, None, truncation_psi=1, truncation_cutoff = None)
 
         block_ws = []
         with torch.autograd.profiler.record_function('split_ws'):
@@ -209,10 +207,7 @@ class LatentOptimizer(torch.nn.Module):
         z = img = None
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             block = getattr(self.G.synthesis, f'b{res}')
-            #if z == None:
-            #    z, img = block(z, img, cur_ws, {})
-            #else:
-            #    z, img = block(z.clone(), img, cur_ws, {})
+
             z, img = block(z, img, cur_ws, {})
 
             if res == end_res:
@@ -221,7 +216,7 @@ class LatentOptimizer(torch.nn.Module):
         return block_ws, z, img #this is some z_p
 
     def run_G2(self, block_ws, z_k, gen_img, start_res):
-        z_k = z_k.detach().clone()
+        #z_k = z_k.detach().clone() #just removed
         #print('z_k shape: ', z_k.shape)
         start = False
 
