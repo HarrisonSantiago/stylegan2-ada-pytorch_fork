@@ -188,10 +188,10 @@ class LatentOptimizer(torch.nn.Module):
 
     def run_G1(self, z_k,  end_res):
 
-        #holder = torch.ones(z_k.shape, device = "cuda", requires_grad = True)
-        #holder = holder * z_k.clone()
-        #ws = self.G.mapping(holder, None, truncation_psi=1, truncation_cutoff = None)
-        ws = self.G.mapping(z_k, None, truncation_psi=1, truncation_cutoff = None)
+        holder = torch.ones(z_k.shape, device = "cuda", requires_grad = True)
+        holder = holder * z_k.clone()
+        ws = self.G.mapping(holder, None, truncation_psi=1, truncation_cutoff = None)
+        #ws = self.G.mapping(z_k, None, truncation_psi=1, truncation_cutoff = None)
 
         block_ws = []
         with torch.autograd.profiler.record_function('split_ws'):
@@ -214,8 +214,9 @@ class LatentOptimizer(torch.nn.Module):
 
             if res == end_res:
                 break
-        holder = torch.ones(z.shape, device="cuda", requires_grad=True)
-        holder = holder * z.clone()
+        #holder = torch.ones(z.shape, device="cuda", requires_grad=True)
+        #holder = holder * z.clone()
+        holder = z
         return block_ws, holder, img #this is some z_p
 
     def run_G2(self, block_ws, z_k, gen_img, start_res):
