@@ -107,9 +107,9 @@ class LatentOptimizer(torch.nn.Module):
     def step4(self, block_ws, z_p, gen_img, target_exc, start_res, radius):
 
         lr = 0.05
-        holder = torch.ones(z_p.shape, device = "cuda", requires_grad = True)
-        z_p = holder * z_p
-        #z_p = torch.tensor(z_p,dtype=torch.float32, device="cuda", requires_grad=True).cuda()
+        z_p = z_p.clone().detach()
+        z_p = torch.tensor(z_p,dtype=torch.float32, device="cuda", requires_grad=True).cuda()
+
         optimizer4 = optim.Adam([z_p], lr=lr)
         loss_fcn = nn.MSELoss()
 
@@ -117,7 +117,7 @@ class LatentOptimizer(torch.nn.Module):
         loss_tracker = []
         mse_min = np.inf
         for _ in range(steps):
-            holder = z_p.clone()
+            #holder = z_p.clone()
             z, img = self.run_G2(block_ws, z_p, gen_img, start_res)
 
 
@@ -135,8 +135,8 @@ class LatentOptimizer(torch.nn.Module):
 
             if loss < mse_min:
                 mse_min = loss
-                #best_z = z
-                best_z = holder
+                best_z = z
+                #best_z = holder
                 best_img = gen_img
 
         #4 project to l1 ball
