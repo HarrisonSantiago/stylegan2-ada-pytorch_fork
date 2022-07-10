@@ -207,17 +207,16 @@ class LatentOptimizer(torch.nn.Module):
         z = img = None
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             block = getattr(self.G.synthesis, f'b{res}')
-            if z == None:
-                z, img = block(z, img, cur_ws, {})
-            else:
-                z, img = block(z.clone(), img, cur_ws, {})
+            #if z == None:
+            #    z, img = block(z, img, cur_ws, {})
+            #else:
+            #    z, img = block(z.clone(), img, cur_ws, {})
+            z, img = block(z, img, cur_ws, {})
 
             if res == end_res:
                 break
-        #holder = torch.ones(z.shape, device="cuda", requires_grad=True)
-        #holder = holder * z.clone()
-        holder = z
-        return block_ws, holder, img #this is some z_p
+
+        return block_ws, z, img #this is some z_p
 
     def run_G2(self, block_ws, z_k, gen_img, start_res):
         z_k = z_k.detach().clone()
