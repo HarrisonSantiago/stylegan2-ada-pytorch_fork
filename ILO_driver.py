@@ -216,16 +216,15 @@ class LatentOptimizer(torch.nn.Module):
         return block_ws, z, img #this is some z_p
 
     def run_G2(self, block_ws, z_k, gen_img, start_res):
-        #z_k = z_k.detach().clone() #just removed
-        #print('z_k shape: ', z_k.shape)
-        start = False
 
+        start = False
 
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             if start:
                 #print('running synth')
                 block = getattr(self.G.synthesis, f'b{res}')
-                z_k, gen_img = block(z_k.clone(), gen_img, cur_ws, {})
+                #z_k, gen_img = block(z_k.clone(), gen_img, cur_ws, {})
+                z_k, gen_img = block(z_k, gen_img, cur_ws, {})
 
 
             if res == start_res:
