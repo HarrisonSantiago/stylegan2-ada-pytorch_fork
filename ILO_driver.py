@@ -116,7 +116,7 @@ class LatentOptimizer(torch.nn.Module):
         loss_tracker = []
         mse_min = np.inf
         for _ in range(steps):
-            holder = z_p
+            holder = z_p.clone()
             z, img = self.run_G2(block_ws, z_p, gen_img, start_res)
 
 
@@ -189,7 +189,7 @@ class LatentOptimizer(torch.nn.Module):
     def run_G1(self, z_k,  end_res):
 
         holder = torch.ones(z_k.shape, device = "cuda", requires_grad = True)
-        holder = holder * z_k
+        holder = holder * z_k.clone()
         ws = self.G.mapping(holder, None, truncation_psi=1, truncation_cutoff = None)
 
         block_ws = []
@@ -206,12 +206,12 @@ class LatentOptimizer(torch.nn.Module):
         z = img = None
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             block = getattr(self.G.synthesis, f'b{res}')
-            z, img = block(z, img, cur_ws, {})
+            z, img = block(z.clone(), img, cur_ws, {})
 
             if res == end_res:
                 break
         holder = torch.ones(z.shape, device="cuda", requires_grad=True)
-        holder = holder * z
+        holder = holder * z.clone()
         return block_ws, holder, img #this is some z_p
 
     def run_G2(self, block_ws, z_k, gen_img, start_res):
@@ -224,7 +224,7 @@ class LatentOptimizer(torch.nn.Module):
             if start:
                 #print('running synth')
                 block = getattr(self.G.synthesis, f'b{res}')
-                z_k, gen_img = block(z_k, gen_img, cur_ws, {})
+                z_k, gen_img = block(z_k.clone(), gen_img, cur_ws, {})
 
 
             if res == start_res:
