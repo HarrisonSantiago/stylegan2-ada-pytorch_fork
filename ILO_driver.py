@@ -107,7 +107,8 @@ class LatentOptimizer(torch.nn.Module):
     def step4(self, block_ws, z_p, gen_img, target_exc, start_res, radius):
 
         lr = 0.05
-        #z_p = z_p.clone().detach()
+        holder = torch.ones(z_p.shape, device = "cuda", requires_grad = True)
+        z_p = holder * z_p
         #z_p = torch.tensor(z_p,dtype=torch.float32, device="cuda", requires_grad=True).cuda()
         optimizer4 = optim.Adam([z_p], lr=lr)
         loss_fcn = nn.MSELoss()
