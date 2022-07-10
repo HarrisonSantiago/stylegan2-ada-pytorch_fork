@@ -206,7 +206,10 @@ class LatentOptimizer(torch.nn.Module):
         z = img = None
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             block = getattr(self.G.synthesis, f'b{res}')
-            z, img = block(z.clone(), img, cur_ws, {})
+            if z == None:
+                z, img = block(z, img, cur_ws, {})
+            else:
+                z, img = block(z.clone(), img, cur_ws, {})
 
             if res == end_res:
                 break
