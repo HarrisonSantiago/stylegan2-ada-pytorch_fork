@@ -166,7 +166,8 @@ class LatentOptimizer(torch.nn.Module):
 
         for step in range(num_steps):
             print('cur res: ', current_res)
-            _, z, gen_img = self.run_G1(z_k.clone(), current_res)
+            #_, z, gen_img = self.run_G1(z_k.clone(), current_res)
+            _, z, gen_img = self.run_G1(z_k, current_res)
 
             print('z shape: ', z.shape)
             print('z_k_hat shape: ', z_p_sq.shape )
