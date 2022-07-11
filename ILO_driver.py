@@ -147,7 +147,7 @@ class LatentOptimizer(torch.nn.Module):
         plt.plot(x, y)
         plt.xlabel('steps')
         plt.ylabel('G_2(x) - x\' loss')
-        plt.title('Step 4, res: ', start_res)
+        plt.title('Step 4, res: '+ str(start_res))
         plt.show()
 
 
@@ -190,7 +190,7 @@ class LatentOptimizer(torch.nn.Module):
         plt.plot(x, y)
         plt.xlabel('steps')
         plt.ylabel('G_1(z^k) - z^p\' loss')
-        plt.title('Step 5, res: ', current_res)
+        plt.title('Step 5, res: ' + str(current_res))
         plt.show()
 
         return z_k_hat, img
