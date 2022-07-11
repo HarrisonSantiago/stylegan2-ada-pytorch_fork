@@ -155,6 +155,9 @@ class LatentOptimizer(torch.nn.Module):
         plt.title('Step 4, res: '+ str(start_res))
         plt.show()
 
+        print('comparing')
+        print(best_z[:15])
+        print(z_p[:15])
 
         return best_z, best_img, mse_min
 
