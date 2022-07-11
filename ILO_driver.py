@@ -282,7 +282,7 @@ class LatentOptimizer(torch.nn.Module):
             name = str(current_res) + "/" + str(i) + ".png"
             im.save(name)
 
-        return block_ws, z_p_hat, img
+        return block_ws, z_k_hat, img
 
 
 
