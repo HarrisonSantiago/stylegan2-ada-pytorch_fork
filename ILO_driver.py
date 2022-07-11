@@ -146,7 +146,7 @@ class LatentOptimizer(torch.nn.Module):
 
         plt.plot(x, y)
         plt.xlabel('steps')
-        plt.ylabel('loss')
+        plt.ylabel('G_2(x) - x\' loss')
         plt.title('Step 4')
         plt.show()
 
@@ -221,9 +221,7 @@ class LatentOptimizer(torch.nn.Module):
 
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             if start:
-                #print('running synth')
                 block = getattr(self.G.synthesis, f'b{res}')
-                #z_k, gen_img = block(z_k.clone(), gen_img, cur_ws, {})
                 z_k, gen_img = block(z_k, gen_img, cur_ws, {})
 
 
@@ -249,8 +247,8 @@ class LatentOptimizer(torch.nn.Module):
             #step 4
             #Does w need to be redone for the z_p
             z_p_sq , z_p_sq_im, loss = self.step4(block_ws, z_p_hat, z_p_hat_img, target_exc, current_res, i+1)
-            print('cur res in invert: ', current_res)
-            print(' after step 4, z_p_sq is: ', z_p_sq.shape)
+            #print('cur res in invert: ', current_res)
+            #print(' after step 4, z_p_sq is: ', z_p_sq.shape)
             if loss < mse_max:
                 mse_max = loss
 
