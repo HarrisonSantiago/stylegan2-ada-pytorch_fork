@@ -141,8 +141,7 @@ class LatentOptimizer(torch.nn.Module):
 
             if loss < mse_min:
                 mse_min = loss
-
-                best_z = holder
+                best_z = new
                 best_img = gen_img
 
         #4 project to l1 ball
@@ -189,7 +188,7 @@ class LatentOptimizer(torch.nn.Module):
 
             if (loss < loss_min):
                 loss_min = loss
-                z_k_hat = z_k
+                z_k_hat = holder
                 img = gen_img
 
         y = np.array(loss_tracker)
