@@ -200,7 +200,7 @@ class LatentOptimizer(torch.nn.Module):
         plt.ylabel('G_1(z^k) - z^p\' loss')
         plt.title('Step 5, res: ' + str(current_res))
         plt.show()
-
+        print('step 5 loss: ', loss_min)
         return z_k_hat, img
 
 
@@ -264,10 +264,7 @@ class LatentOptimizer(torch.nn.Module):
             #step 4
             #Does w need to be redone for the z_p
             z_p_sq , z_p_sq_im, loss = self.step4(block_ws, z_p_hat, z_p_hat_img, target_exc, current_res, i+1)
-            #print('cur res in invert: ', current_res)
-            #print(' after step 4, z_p_sq is: ', z_p_sq.shape)
-            #if loss < mse_max:
-            #mse_max = loss
+            print('step 4 loss: ', loss)
 
             #step 5
             z_k_hat, img = self.step5(z_p_sq, z_k_hat, current_res)
