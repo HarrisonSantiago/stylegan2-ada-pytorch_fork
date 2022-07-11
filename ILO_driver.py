@@ -161,6 +161,10 @@ class LatentOptimizer(torch.nn.Module):
 
     def step5(self, z_p_sq, z_k,  current_res, initial_learning_rate = 0.05):
         print('--- starting step 5 ---')
+        holder = torch.ones(z_k.shape, device="cuda", requires_grad=True)
+        holder = holder * z_k.clone()
+        z_k = holder
+
 
         num_steps = 60
 
