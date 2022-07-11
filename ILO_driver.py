@@ -163,21 +163,21 @@ class LatentOptimizer(torch.nn.Module):
         print('--- starting step 5 ---')
         holder = torch.ones(z_k.shape, device="cuda", requires_grad=True)
         holder = holder * z_k.clone()
-        z_k = holder
+
 
 
         num_steps = 60
 
         #z = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
-        optimizer5 = torch.optim.Adam([z_k], lr=initial_learning_rate)
+        optimizer5 = torch.optim.Adam([holder], lr=initial_learning_rate)
 
         loss_min = np.inf
         loss_tracker = []
 
         for step in range(num_steps):
             #print('cur res: ', current_res)
-            _, z, gen_img = self.run_G1(z_k, current_res)
+            _, z, gen_img = self.run_G1(holder, current_res)
 
             #print('z shape: ', z.shape)
             #print('z_k_hat shape: ', z_p_sq.shape )
