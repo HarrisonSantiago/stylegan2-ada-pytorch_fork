@@ -268,6 +268,11 @@ class LatentOptimizer(torch.nn.Module):
 
             block_ws, z_p_hat, img = self.run_G1(z_k_hat, current_res)
 
+            z_p_hat_img = img
+
+            z, img = self.run_G2(block_ws, z_p_hat, img, current_res)
+
+
             im = self.genToPng(img)
             name = str(current_res) + "radius " + str(i) + ".png"
             im.save(name)
@@ -349,6 +354,7 @@ class LatentOptimizer(torch.nn.Module):
         for i, res in enumerate(res_lst):
             print('starting layer ', i, 'with a resolution of ', str(res))
             block_ws, z_k_hat, gen_img = self.invert_(z_k_hat, img, target_exc, res)
+
 
         print('outputting best image')
         img = self.G(z_k_hat, None)
