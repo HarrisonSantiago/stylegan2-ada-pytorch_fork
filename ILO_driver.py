@@ -121,8 +121,8 @@ class LatentOptimizer(torch.nn.Module):
         for _ in range(steps):
             holder = new.clone()
 
-            deviation = project_onto_l1_ball(new - z_p, radius)
-            new = (z_p + deviation)
+            #deviation = project_onto_l1_ball(new - z_p, radius)
+            #new = (z_p + deviation)
 
             z, img = self.run_G2(block_ws, new, gen_img, start_res)
 
