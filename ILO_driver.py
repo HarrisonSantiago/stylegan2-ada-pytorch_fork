@@ -282,7 +282,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
 
-    def step1(self, target_exc, num_steps = 500, initial_learning_rate = 0.1):
+    def step1(self, target_exc, num_steps = 100, initial_learning_rate = 0.1):
         print('--- step 1 ---')
         loss_tracker = []
 
