@@ -1,3 +1,5 @@
+import os.path
+
 import torchvision
 import numpy as np
 import math
@@ -108,17 +110,21 @@ class LatentOptimizer(torch.nn.Module):
 
         lr = 0.05
         z_p = z_p.clone().detach()
-        z_p = torch.tensor(z_p,dtype=torch.float32, device="cuda", requires_grad=True).cuda()
+        new = torch.tensor(z_p,dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
-        optimizer4 = optim.Adam([z_p], lr=lr)
+        optimizer4 = optim.Adam([new], lr=lr)
         loss_fcn = nn.MSELoss()
 
         steps = 50
         loss_tracker = []
         mse_min = np.inf
         for _ in range(steps):
-            holder = z_p.clone()
-            z, img = self.run_G2(block_ws, z_p, gen_img, start_res)
+            holder = new.clone()
+
+            deviation = project_onto_l1_ball(new - z_p, radius)
+            new = (z_p + deviation)
+
+            z, img = self.run_G2(block_ws, new, gen_img, start_res)
 
 
             img = (img * 127.5 + 128).clamp(0, 255)
@@ -274,7 +280,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
             im = self.genToPng(img)
-            name = str(current_res) + "radius " + str(i) + ".png"
+            name = str(current_res) + "/" + str(i) + ".png"
             im.save(name)
 
         return block_ws, z_p_hat, img
@@ -346,14 +352,19 @@ class LatentOptimizer(torch.nn.Module):
         print('Saving image')
         img = self.G(z_k_hat, None)
         im = self.genToPng(img)
-        im.save('test2.png')
+        im.save('step1.png')
 
         #This is how we get the layers to go over
         res_lst = self.G.synthesis.block_resolutions
 
         for i, res in enumerate(res_lst):
+            if not os.path.isdir(str(res)):
+                os.mkdir(str(res))
+            os.remove(res+'/*')
             print('starting layer ', i, 'with a resolution of ', str(res))
             block_ws, z_k_hat, gen_img = self.invert_(z_k_hat, img, target_exc, res)
+
+
 
 
         print('outputting best image')
