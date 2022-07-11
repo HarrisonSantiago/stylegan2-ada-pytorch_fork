@@ -147,7 +147,7 @@ class LatentOptimizer(torch.nn.Module):
         plt.plot(x, y)
         plt.xlabel('steps')
         plt.ylabel('G_2(x) - x\' loss')
-        plt.title('Step 4')
+        plt.title('Step 4, res: ', start_res)
         plt.show()
 
 
@@ -163,26 +163,35 @@ class LatentOptimizer(torch.nn.Module):
         optimizer5 = torch.optim.Adam([z_k], lr=initial_learning_rate)
 
         loss_min = np.inf
+        loss_tracker = []
 
         for step in range(num_steps):
-            print('cur res: ', current_res)
+            #print('cur res: ', current_res)
             _, z, gen_img = self.run_G1(z_k, current_res)
 
-            print('z shape: ', z.shape)
-            print('z_k_hat shape: ', z_p_sq.shape )
+            #print('z shape: ', z.shape)
+            #print('z_k_hat shape: ', z_p_sq.shape )
             loss = torch.sum(torch.square(z - z_p_sq))
 
-            print('loss: ', loss)
+            #print('loss: ', loss)
             optimizer5.zero_grad()
             loss.backward()
             optimizer5.step()
+            loss_tracker.append(loss.detach().cpu())
 
             if (loss < loss_min):
                 loss_min = loss
                 z_k_hat = z_k
                 img = gen_img
 
+        y = np.array(loss_tracker)
+        x = np.arange(len(y))
 
+        plt.plot(x, y)
+        plt.xlabel('steps')
+        plt.ylabel('G_1(z^k) - z^p\' loss')
+        plt.title('Step 5, res: ', current_res)
+        plt.show()
 
         return z_k_hat, img
 
@@ -259,6 +268,9 @@ class LatentOptimizer(torch.nn.Module):
 
                 block_ws, z_p_hat, img = self.run_G1(z_k_hat, current_res)
 
+                im = self.genToPng(img)
+                name = str(current_res) + "radius " + str(i) + ".png"
+                im.save(name)
 
         return block_ws, z_p_hat, img
 
@@ -271,7 +283,7 @@ class LatentOptimizer(torch.nn.Module):
 
         z_k = torch.randn([1, self.G.z_dim], dtype = torch.float32, device = "cuda", requires_grad=True).cuda()
 
-        print('step 1 z_k_hat shape: ', z_k.shape)
+        #print('step 1 z_k_hat shape: ', z_k.shape)
 
         optimizer = torch.optim.Adam([z_k], lr = initial_learning_rate)
         loss_fcn = nn.MSELoss()
@@ -285,11 +297,11 @@ class LatentOptimizer(torch.nn.Module):
             #gen_exc = ISETBio[]
             gen_exc = gen_img
 
-            print('shape: ', gen_exc.shape)
+            #print('shape: ', gen_exc.shape)
             loss = loss_fcn(gen_exc[0], target_exc)
 
             #loss = (target_exc - gen_exc[0]).square().sum()
-            print('step: ', step, ', loss: ', loss)
+            #print('step: ', step, ', loss: ', loss)
             loss_tracker.append(loss.detach().cpu())
             loss.backward()
             optimizer.step()
