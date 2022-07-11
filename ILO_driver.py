@@ -266,21 +266,23 @@ class LatentOptimizer(torch.nn.Module):
             z_p_sq , z_p_sq_im, loss = self.step4(block_ws, z_p_hat, z_p_hat_img, target_exc, current_res, i+1)
             print('step 4 loss: ', loss)
 
-            #step 5
-            z_k_hat, img = self.step5(z_p_sq, z_k_hat, current_res)
+            if loss < mse_max or i == 100:
+                mse_max = loss
+                #step 5
+                z_k_hat, img = self.step5(z_p_sq, z_k_hat, current_res)
 
-            #step 6
+                #step 6
 
-            block_ws, z_p_hat, img = self.run_G1(z_k_hat, current_res)
+                block_ws, z_p_hat, img = self.run_G1(z_k_hat, current_res)
 
-            z_p_hat_img = img
+                z_p_hat_img = img
 
-            z, img = self.run_G2(block_ws, z_p_hat, img, current_res)
+                z, img = self.run_G2(block_ws, z_p_hat, img, current_res)
 
 
-            im = self.genToPng(img)
-            name = str(current_res) + "/" + str(i) + ".png"
-            im.save(name)
+                im = self.genToPng(img)
+                name = str(current_res) + "/" + str(i) + ".png"
+                im.save(name)
 
         return block_ws, z_k_hat, img
 
