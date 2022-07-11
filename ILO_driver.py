@@ -258,19 +258,19 @@ class LatentOptimizer(torch.nn.Module):
             z_p_sq , z_p_sq_im, loss = self.step4(block_ws, z_p_hat, z_p_hat_img, target_exc, current_res, i+1)
             #print('cur res in invert: ', current_res)
             #print(' after step 4, z_p_sq is: ', z_p_sq.shape)
-            if loss < mse_max:
-                mse_max = loss
+            #if loss < mse_max:
+            #mse_max = loss
 
-                #step 5
-                z_k_hat, img = self.step5(z_p_sq, z_k_hat, current_res)
+            #step 5
+            z_k_hat, img = self.step5(z_p_sq, z_k_hat, current_res)
 
-                #step 6
+            #step 6
 
-                block_ws, z_p_hat, img = self.run_G1(z_k_hat, current_res)
+            block_ws, z_p_hat, img = self.run_G1(z_k_hat, current_res)
 
-                im = self.genToPng(img)
-                name = str(current_res) + "radius " + str(i) + ".png"
-                im.save(name)
+            im = self.genToPng(img)
+            name = str(current_res) + "radius " + str(i) + ".png"
+            im.save(name)
 
         return block_ws, z_p_hat, img
 
@@ -351,4 +351,7 @@ class LatentOptimizer(torch.nn.Module):
             block_ws, z_k_hat, gen_img = self.invert_(z_k_hat, img, target_exc, res)
 
         print('outputting best image')
+        img = self.G(z_k_hat, None)
+        im = self.genToPng(img)
+        im.save('final.png')
         return z_k_hat, target_image
