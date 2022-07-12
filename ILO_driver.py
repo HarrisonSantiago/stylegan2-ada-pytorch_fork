@@ -161,7 +161,7 @@ class LatentOptimizer(torch.nn.Module):
 
         return best_z, best_img, mse_min
 
-    def step5(self, z_p_sq, z_k,  current_res, initial_learning_rate = 0.05):
+    def step5(self, z_p_sq, z_k,  current_res, initial_learning_rate = 0.005):
         print('--- starting step 5 ---')
         #z_k = z_k.clone().detach()
         #holder = torch.tensor(z_k, dtype=torch.float32, device="cuda", requires_grad=True).cuda()
@@ -273,6 +273,12 @@ class LatentOptimizer(torch.nn.Module):
             #step 5
             z_k_hat_new, img = self.step5(z_p_sq, z_k_hat, current_res)
 
+            if loss < mse_max:
+                mse_max = loss
+                best_zk = z_k_hat_new
+                best_img = z_p_sq_im
+
+
             #step 6
 
             block_ws, z_p_hat_new, img = self.run_G1(z_k_hat_new, current_res)
@@ -286,7 +292,7 @@ class LatentOptimizer(torch.nn.Module):
             name = str(current_res) + "/" + str(i) + ".png"
             im.save(name)
 
-        return block_ws, z_k_hat, img
+        return block_ws, best_zk, best_img
 
 
 
