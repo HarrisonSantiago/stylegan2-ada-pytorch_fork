@@ -282,7 +282,7 @@ class LatentOptimizer(torch.nn.Module):
 
             #step 6
 
-            block_ws, z_p_hat_new, img = self.run_G1(z_k_hat_new, current_res)
+            block_ws, z_p_hat_new, img, ws = self.run_G1(z_k_hat_new, current_res)
 
             z_p_hat_img = img
 
