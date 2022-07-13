@@ -210,7 +210,7 @@ class LatentOptimizer(torch.nn.Module):
 
         holder = torch.ones(z_k.shape, device = "cuda", requires_grad = True)
         holder = holder * z_k.clone()
-        ws = self.G.mapping(holder, None, truncation_psi=1, truncation_cutoff = None)
+        ws = self.G.mapping(holder, None)
 
         block_ws = []
         with torch.autograd.profiler.record_function('split_ws'):
@@ -227,7 +227,7 @@ class LatentOptimizer(torch.nn.Module):
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             block = getattr(self.G.synthesis, f'b{res}')
 
-            z, img = block(z, img, cur_ws, {})
+            z, img = block(z, img, cur_ws, noise_mode = 'const')
 
             if res == end_res:
                 break
