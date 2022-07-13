@@ -166,7 +166,7 @@ class LatentOptimizer(torch.nn.Module):
         #z_k = z_k.clone().detach()
         #holder = torch.tensor(z_k, dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
-        num_steps = 600
+        num_steps = 60
 
         holder = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
@@ -208,9 +208,10 @@ class LatentOptimizer(torch.nn.Module):
 
     def run_G1(self, z_k,  end_res):
 
-        holder = torch.ones(z_k.shape, device = "cuda", requires_grad = True)
-        holder = holder * z_k.clone()
-        ws = self.G.mapping(holder, None)
+        #holder = torch.ones(z_k.shape, device = "cuda", requires_grad = True)
+        #holder = holder * z_k.clone()
+        #ws = self.G.mapping(holder, None)
+        ws = self.G.mapping(z_k, None)
 
         block_ws = []
         with torch.autograd.profiler.record_function('split_ws'):
