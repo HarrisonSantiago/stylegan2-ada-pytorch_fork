@@ -271,7 +271,7 @@ class LatentOptimizer(torch.nn.Module):
             print('step 4 loss: ', loss)
 
             #step 5
-            z_k_hat_new, img = self.step5(z_p_sq, z_k_hat, current_res, ws)
+            z_k_hat_new, img = self.step5(z_p_sq, z_k_hat, current_res, ws.detach().clone())
 
             if loss < mse_max:
                 mse_max = loss
