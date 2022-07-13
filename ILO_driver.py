@@ -161,12 +161,12 @@ class LatentOptimizer(torch.nn.Module):
 
         return best_z, best_img, mse_min
 
-    def step5(self, z_p_sq, z_k,  current_res, initial_learning_rate = 0.005):
+    def step5(self, z_p_sq, z_k,  current_res, z_p_sq_ws,  initial_learning_rate = 0.005):
         print('--- starting step 5 ---')
         #z_k = z_k.clone().detach()
         #holder = torch.tensor(z_k, dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
-        num_steps = 60
+        num_steps = 600
 
         holder = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
@@ -177,17 +177,17 @@ class LatentOptimizer(torch.nn.Module):
 
         for step in range(num_steps):
             #print('cur res: ', current_res)
-            _, z, gen_img = self.run_G1(holder, current_res)
+            _, z, gen_img, ws_gen = self.run_G1(holder, current_res)
 
             #print('z shape: ', z.shape)
             #print('z_k_hat shape: ', z_p_sq.shape )
-            loss = torch.sum(torch.square(z - z_p_sq))
+            loss = torch.sum(torch.square(z_p_sq_ws - ws_gen))
 
             #print('loss: ', loss)
             optimizer5.zero_grad()
             loss.backward()
             optimizer5.step()
-            loss_tracker.append(loss.detach().cpu())
+            loss_tracker.append(torch.sum(torch.square(z_p_sq - z)).detach().cpu())
 
             if (loss < loss_min):
                 loss_min = loss
@@ -232,7 +232,7 @@ class LatentOptimizer(torch.nn.Module):
             if res == end_res:
                 break
 
-        return block_ws, z, img #this is some z_p
+        return block_ws, z, img, ws #this is some z_p
 
     def run_G2(self, block_ws, z_k, gen_img, start_res):
 
@@ -254,7 +254,7 @@ class LatentOptimizer(torch.nn.Module):
     def invert_(self, z_k_hat, z_k_hat_img, target_exc, current_res, radius = 250):
         torch.autograd.set_detect_anomaly(True)
         #step 2
-        block_ws, z_p_hat, z_p_hat_img = self.run_G1(z_k_hat, current_res)
+        block_ws, z_p_hat, z_p_hat_img, ws = self.run_G1(z_k_hat, current_res)
 
 
         #steps 3-6
@@ -271,7 +271,7 @@ class LatentOptimizer(torch.nn.Module):
             print('step 4 loss: ', loss)
 
             #step 5
-            z_k_hat_new, img = self.step5(z_p_sq, z_k_hat, current_res)
+            z_k_hat_new, img = self.step5(z_p_sq, z_k_hat, current_res, ws)
 
             if loss < mse_max:
                 mse_max = loss
