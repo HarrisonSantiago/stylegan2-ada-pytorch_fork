@@ -166,7 +166,7 @@ class LatentOptimizer(torch.nn.Module):
         #z_k = z_k.clone().detach()
         #holder = torch.tensor(z_k, dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
-        num_steps = 60
+        num_steps = 600
 
         holder = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
