@@ -85,7 +85,7 @@ class LatentOptimizer(torch.nn.Module):
         optimizer4 = optim.Adam([new], lr=lr)
         loss_fcn = nn.MSELoss()
 
-        steps = 50
+        steps = 150
         loss_tracker = []
         mse_min = np.inf
         for _ in range(steps):
@@ -230,9 +230,14 @@ class LatentOptimizer(torch.nn.Module):
 
             #step 4
             #Does w need to be redone for the z_p
-            best_int_latent_p, best_int_lat_p_img, loss = self.step4(block_ws, int_latent_p_hat, step2_img, target_exc, current_res, i+1)
+
             if i > 0:
-                best_int_latent_p, best_int_lat_p_img, mse_min = self.step4(block_ws, step6_p_hat, step6_img, target_exc, current_res, i+1)
+                best_int_latent_p, best_int_lat_p_img, mse_min = self.step4(block_ws, step6_p_hat, step6_img,
+                                                                            target_exc, current_res, i+1)
+            else:
+                best_int_latent_p, best_int_lat_p_img, loss = self.step4(block_ws, int_latent_p_hat, step2_img,
+                                                                         target_exc, current_res, i + 1)
+
             print('step 4 loss: ', loss)
 
             #step 5
