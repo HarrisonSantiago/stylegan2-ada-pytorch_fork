@@ -312,8 +312,8 @@ class LatentOptimizer(torch.nn.Module):
             #gen_exc = ISETBio[]
             gen_exc = gen_img
 
-            print('shape: ', gen_exc.shape)
-            print('t shape: ', target_exc.shape)
+            #print('shape: ', gen_exc.shape)
+            #print('t shape: ', target_exc.shape)
             loss = loss_fcn(gen_exc[0], target_exc)
 
 
@@ -325,7 +325,7 @@ class LatentOptimizer(torch.nn.Module):
 
             if loss < mse_min:
                 mse_min = loss
-                best_w = w_opt
+                best_w = ws
                 best_img = gen_img
 
         y = np.array(loss_tracker)
