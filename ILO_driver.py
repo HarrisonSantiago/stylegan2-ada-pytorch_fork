@@ -192,7 +192,7 @@ class LatentOptimizer(torch.nn.Module):
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             block = getattr(self.G.synthesis, f'b{res}')
 
-            int_latent, img = block(int_latent, img, cur_ws, noise_mode = 'const')
+            int_latent, img = block(int_latent, img, cur_ws, {})
 
             if res == end_res:
                 break
