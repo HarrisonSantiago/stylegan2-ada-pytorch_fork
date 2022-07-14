@@ -284,21 +284,31 @@ class LatentOptimizer(torch.nn.Module):
 
 
 
-    def step1(self, target_exc, num_steps = 100, initial_learning_rate = 0.1):
+    def step1(self, target_exc, num_steps = 100, initial_learning_rate = 0.1, w_avg_samples = 10000 ):
         print('--- step 1 ---')
         loss_tracker = []
 
         z_k = torch.randn([1, self.G.z_dim], dtype = torch.float32, device = "cuda", requires_grad=True).cuda()
 
+        z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
+        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
+        w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
+        w_avg = np.mean(w_samples, axis=0, keepdims=True)
+
+
+
+
         #print('step 1 z_k_hat shape: ', z_k.shape)
 
-        optimizer = torch.optim.Adam([z_k], lr = initial_learning_rate)
+        w_opt = torch.tensor(w_avg, dtype=torch.float32, device="cuda", requires_grad=True)
+        optimizer = torch.optim.Adam([w_opt] , betas=(0.9, 0.999), lr=initial_learning_rate)
         loss_fcn = nn.MSELoss()
 
         mse_min = np.inf
 
         for step in range(num_steps):
-            gen_img = self.G(z_k, c=None, noise_mode='const')
+
+            gen_img = self.G.synthesis(w_opt, noise_mode='const')
             gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
             #gen_exc = ISETBio[]
@@ -307,16 +317,17 @@ class LatentOptimizer(torch.nn.Module):
             #print('shape: ', gen_exc.shape)
             loss = loss_fcn(gen_exc[0], target_exc)
 
-            #loss = (target_exc - gen_exc[0]).square().sum()
-            #print('step: ', step, ', loss: ', loss)
+
             loss_tracker.append(loss.detach().cpu())
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-            optimizer.zero_grad()
+
 
             if loss < mse_min:
                 mse_min = loss
-                z_k_hat = z_k
+                best_w = w_opt
+                best_img = gen_img
 
         y = np.array(loss_tracker)
         x = np.arange(len(y))
@@ -326,8 +337,8 @@ class LatentOptimizer(torch.nn.Module):
         plt.ylabel('loss')
         plt.show()
 
-        w = self.G.mapping(z_k_hat, None)
-        return w, gen_img
+
+        return best_w, best_img
 
     def genToPng(self, gen_img):
         #turns it from something that G(z,c) outputs, into a png savable format
