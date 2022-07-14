@@ -87,6 +87,7 @@ class LatentOptimizer(torch.nn.Module):
 
         steps = 150
         loss_tracker = []
+        diff_tracker = []
         mse_min = np.inf
         for _ in range(steps):
 
@@ -107,11 +108,12 @@ class LatentOptimizer(torch.nn.Module):
             optimizer4.zero_grad()
             loss.backward(retain_graph=True)
             optimizer4.step()
-
             if loss < mse_min:
                 mse_min = loss
                 best_int_latent_p = new
                 best_img = gen_img
+            diff_tracker.append(torch.sum(torch.square(best_int_latent_p - int_latent_p)).detach().cpu())
+
 
         #4 project to l1 ball
 
@@ -123,6 +125,16 @@ class LatentOptimizer(torch.nn.Module):
         plt.ylabel('G_2(x) - x\' loss')
         plt.title('Step 4, res: '+ str(start_res))
         plt.show()
+
+        y = np.array(diff_tracker)
+        x = np.arange(len(y))
+
+        plt.plot(x, y)
+        plt.xlabel('steps')
+        plt.ylabel('new latent - old latent')
+        plt.title('Step 4, latent differences: ' + str(start_res))
+        plt.show()
+
 
         print('total diff between old latent and new latent: ', torch.sum(best_int_latent_p - int_latent_p))
 
