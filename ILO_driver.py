@@ -102,7 +102,7 @@ class LatentOptimizer(torch.nn.Module):
             # int_cone_exc = ISETBIO(gen_img)
             int_cone_exc = img
 
-            loss = loss_fcn(int_cone_exc[0], target_exc) + torch.sum(torch.square(new - int_latent_p))
+            loss = loss_fcn(int_cone_exc[0], target_exc) + 0.5 * torch.sum(torch.square(new - int_latent_p))
 
             loss_tracker.append(loss.detach().cpu())
             optimizer4.zero_grad()
