@@ -288,8 +288,6 @@ class LatentOptimizer(torch.nn.Module):
         print('--- step 1 ---')
         loss_tracker = []
 
-        z_k = torch.randn([1, self.G.z_dim], dtype = torch.float32, device = "cuda", requires_grad=True).cuda()
-
         z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
         w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
         w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
