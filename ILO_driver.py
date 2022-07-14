@@ -124,6 +124,8 @@ class LatentOptimizer(torch.nn.Module):
         plt.title('Step 4, res: '+ str(start_res))
         plt.show()
 
+        print('total diff between old latent and new latent: ', torch.sum(best_int_latent_p - int_latent_p))
+
         return best_int_latent_p, best_img, mse_min
 
     def step5(self, target_int_latent, step2_latent_k, current_res, initial_learning_rate = 0.005):
