@@ -237,7 +237,7 @@ class LatentOptimizer(torch.nn.Module):
 
         best_latentk = w_k_hat
         #steps 3-6
-        radius = 100
+        radius = 10
         pbar = tqdm(range(radius))
         mse_max = np.inf
         for i in pbar:
