@@ -232,11 +232,12 @@ class LatentOptimizer(torch.nn.Module):
             #Does w need to be redone for the z_p
             best_int_latent_p, best_int_lat_p_img, loss = self.step4(block_ws, int_latent_p_hat, step2_img, target_exc, current_res, i+1)
             if i > 0:
-                best_int_latent_p, best_int_lat_p_img, mse_min = self.step4(block_ws, z_p_hat_new, z_p_hat_img, target_exc, current_res, i+1)
+                best_int_latent_p, best_int_lat_p_img, mse_min = self.step4(block_ws, step6_p_hat, step6_img, target_exc, current_res, i+1)
             print('step 4 loss: ', loss)
 
             #step 5
-            latent_k_hat_new, step5_img = self.step5(best_int_latent_p, w_k_hat, current_res, ws.detach().clone())
+            latent_k_hat_new, step5_img = self.step5(best_int_latent_p, w_k_hat, current_res)
+
 
 
 
