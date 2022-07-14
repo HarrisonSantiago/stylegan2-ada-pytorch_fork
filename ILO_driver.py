@@ -70,47 +70,17 @@ class LatentOptimizer(torch.nn.Module):
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
 
-        if config['image_size'][0] != config['image_size'][1]:
-            raise Exception('Non-square images are not supported yet.')
-
-
-        self.G.start_layer = config['start_layer']
-        self.G.end_layer = config['end_layer']
-
-        #TODO: replace this mapping proxy with the mapping in ada
-
-
-        self.init_state()
-
-    def init_state(self):
-        device = self.config['device']
-	  #Project latent to unit ball?
-        self.project = self.config["project"]
-	  #How many steps to run per layer
-        self.steps = self.config["steps"]
-
-        self.layer_in = None
-        self.best = None
-        self.current_step = 0
-
-
-        # save filters
-	  #Changed by removing perc, m, self.indices, self.filters, self.sign_pattern stuff
-	  #Looks like it only applies to the partial circulant compressed sensing stuff
-
-
-
     def get_lr(self, t, initial_lr, rampdown=0.75, rampup=0.05):
         lr_ramp = min(1, (1 - t) / rampdown)
         lr_ramp = 0.5 - 0.5 * math.cos(lr_ramp * math.pi)
         lr_ramp = lr_ramp * min(1, t / rampup)
         return initial_lr * lr_ramp
 
-    def step4(self, block_ws, z_p, gen_img, target_exc, start_res, radius):
+    def step4(self, block_ws, int_latent_p, gen_img, target_exc, start_res, radius):
 
         lr = 0.05
-        z_p = z_p.clone().detach()
-        new = torch.tensor(z_p,dtype=torch.float32, device="cuda", requires_grad=True).cuda()
+        int_latent_p = int_latent_p.clone().detach()
+        new = torch.tensor(int_latent_p,dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
         optimizer4 = optim.Adam([new], lr=lr)
         loss_fcn = nn.MSELoss()
@@ -119,12 +89,11 @@ class LatentOptimizer(torch.nn.Module):
         loss_tracker = []
         mse_min = np.inf
         for _ in range(steps):
-            holder = new.clone()
 
             #deviation = project_onto_l1_ball(new - z_p, radius)
             #new = (z_p + deviation)
 
-            z, img = self.run_G2(block_ws, new, gen_img, start_res)
+            last_latent, img = self.run_G2(block_ws, new, gen_img, start_res)
 
 
             img = (img * 127.5 + 128).clamp(0, 255)
@@ -141,7 +110,7 @@ class LatentOptimizer(torch.nn.Module):
 
             if loss < mse_min:
                 mse_min = loss
-                best_z = new
+                best_int_latent_p = new
                 best_img = gen_img
 
         #4 project to l1 ball
@@ -155,20 +124,16 @@ class LatentOptimizer(torch.nn.Module):
         plt.title('Step 4, res: '+ str(start_res))
         plt.show()
 
-        #print('comparing')
-        #print(best_z[:15])
-        #print(z_p[:15])
+        return best_int_latent_p, best_img, mse_min
 
-        return best_z, best_img, mse_min
-
-    def step5(self, z_p_sq, z_k,  current_res, z_p_sq_ws,  initial_learning_rate = 0.005):
+    def step5(self, target_int_latent, step2_latent_k, current_res, initial_learning_rate = 0.005):
         print('--- starting step 5 ---')
-        #z_k = z_k.clone().detach()
-        #holder = torch.tensor(z_k, dtype=torch.float32, device="cuda", requires_grad=True).cuda()
+        latent_k = step2_latent_k.clone().detach()
+        holder = torch.tensor(latent_k, dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
         num_steps = 600
 
-        holder = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
+        #holder = torch.randn([1, self.G.z_dim], dtype=torch.float32, device="cuda", requires_grad=True).cuda()
 
         optimizer5 = torch.optim.Adam([holder], lr=initial_learning_rate)
 
@@ -177,22 +142,22 @@ class LatentOptimizer(torch.nn.Module):
 
         for step in range(num_steps):
             #print('cur res: ', current_res)
-            _, z, gen_img, ws_gen = self.run_G1(holder, current_res)
+            block_ws, int_latent, img = self.run_G1(holder, current_res)
 
             #print('z shape: ', z.shape)
             #print('z_k_hat shape: ', z_p_sq.shape )
-            loss = torch.sum(torch.square(z_p_sq_ws - ws_gen))
+            loss = torch.sum(torch.square(int_latent - target_int_latent))
 
             #print('loss: ', loss)
             optimizer5.zero_grad()
             loss.backward()
             optimizer5.step()
-            loss_tracker.append(torch.sum(torch.square(z_p_sq - z)).detach().cpu())
+            loss_tracker.append(loss.detach().cpu())
 
             if (loss < loss_min):
                 loss_min = loss
-                z_k_hat = holder
-                img = gen_img
+                latent_k_hat = holder
+                gen_img = img
 
         y = np.array(loss_tracker)
         x = np.arange(len(y))
@@ -203,20 +168,19 @@ class LatentOptimizer(torch.nn.Module):
         plt.title('Step 5, res: ' + str(current_res))
         plt.show()
         print('step 5 loss: ', loss_min)
-        return z_k_hat, img
+        return latent_k_hat, gen_img
 
 
-    def run_G1(self, z_k,  end_res):
+    def run_G1(self, w_k,  end_res):
 
         #holder = torch.ones(z_k.shape, device = "cuda", requires_grad = True)
         #holder = holder * z_k.clone()
         #ws = self.G.mapping(holder, None)
-        ws = self.G.mapping(z_k, None)
 
         block_ws = []
         with torch.autograd.profiler.record_function('split_ws'):
-            misc.assert_shape(ws, [None, self.G.num_ws, self.G.w_dim])
-            ws = ws.to(torch.float32)
+            misc.assert_shape(w_k, [None, self.G.num_ws, self.G.w_dim])
+            ws = w_k.to(torch.float32)
             w_idx = 0
             for res in self.G.synthesis.block_resolutions:  # up to certain layer
                 block = getattr(self.G.synthesis, f'b{res}')
@@ -224,40 +188,40 @@ class LatentOptimizer(torch.nn.Module):
                 w_idx += block.num_conv
 
 
-        z = img = None
+        int_latent = img = None
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             block = getattr(self.G.synthesis, f'b{res}')
 
-            z, img = block(z, img, cur_ws, noise_mode = 'const')
+            int_latent, img = block(int_latent, img, cur_ws, noise_mode = 'const')
 
             if res == end_res:
                 break
 
-        return block_ws, z, img, ws #this is some z_p
+        return block_ws, int_latent, img #this is some z_p
 
-    def run_G2(self, block_ws, z_k, gen_img, start_res):
+    def run_G2(self, block_ws, int_latent_p, gen_img, start_res):
 
         start = False
 
         for res, cur_ws in zip(self.G.synthesis.block_resolutions, block_ws):
             if start:
                 block = getattr(self.G.synthesis, f'b{res}')
-                z_k, gen_img = block(z_k, gen_img, cur_ws, {})
+                int_latent_p, gen_img = block(int_latent_p, gen_img, cur_ws, {})
 
 
             if res == start_res:
                 start = True
 
+        #final int_latent_p is the for the last layer
+        return int_latent_p, gen_img #completed image
 
-        return z_k, gen_img #completed image
 
-
-    def invert_(self, z_k_hat, z_k_hat_img, target_exc, current_res, radius = 250):
+    def invert_(self, w_k_hat, w_k_hat_img, target_exc, current_res, radius = 250):
         torch.autograd.set_detect_anomaly(True)
         #step 2
-        block_ws, z_p_hat, z_p_hat_img, ws = self.run_G1(z_k_hat, current_res)
+        block_ws, int_latent_p_hat, step2_img = self.run_G1(w_k_hat, current_res)
 
-
+        best_latentk = w_k_hat
         #steps 3-6
         radius = 100
         pbar = tqdm(range(radius))
@@ -266,34 +230,36 @@ class LatentOptimizer(torch.nn.Module):
 
             #step 4
             #Does w need to be redone for the z_p
-            z_p_sq , z_p_sq_im, loss = self.step4(block_ws, z_p_hat, z_p_hat_img, target_exc, current_res, i+1)
+            best_int_latent_p, best_int_lat_p_img, loss = self.step4(block_ws, int_latent_p_hat, step2_img, target_exc, current_res, i+1)
             if i > 0:
-                z_p_sq , z_p_sq_im, loss = self.step4(block_ws, z_p_hat_new, z_p_hat_img, target_exc, current_res, i+1)
+                best_int_latent_p, best_int_lat_p_img, mse_min = self.step4(block_ws, z_p_hat_new, z_p_hat_img, target_exc, current_res, i+1)
             print('step 4 loss: ', loss)
 
             #step 5
-            z_k_hat_new, img = self.step5(z_p_sq, z_k_hat, current_res, ws.detach().clone())
+            latent_k_hat_new, step5_img = self.step5(best_int_latent_p, w_k_hat, current_res, ws.detach().clone())
+
+
 
             if loss < mse_max:
                 mse_max = loss
-                best_zk = z_k_hat_new
-                best_img = z_p_sq_im
+                best_latentk = latent_k_hat_new
+                best_img = step5_img
 
 
             #step 6
 
-            block_ws, z_p_hat_new, img, ws = self.run_G1(z_k_hat_new, current_res)
-
-            z_p_hat_img = img
-
-            z, img = self.run_G2(block_ws, z_p_hat_new, img, current_res)
+            block_ws_s6, step6_p_hat, step6_img = self.run_G1(best_latentk, current_res)
 
 
-            im = self.genToPng(img)
+
+            _, round_img = self.run_G2(block_ws_s6, step6_p_hat, step6_img, current_res)
+
+
+            im = self.genToPng(round_img)
             name = str(current_res) + "/" + str(i) + ".png"
             im.save(name)
 
-        return block_ws, best_zk, best_img
+        return block_ws, best_latentk, best_img
 
 
 
@@ -339,7 +305,9 @@ class LatentOptimizer(torch.nn.Module):
         plt.xlabel('steps')
         plt.ylabel('loss')
         plt.show()
-        return z_k_hat, gen_img
+
+        w = self.G.mapping(z_k_hat, None)
+        return w, gen_img
 
     def genToPng(self, gen_img):
         #turns it from something that G(z,c) outputs, into a png savable format
@@ -356,11 +324,11 @@ class LatentOptimizer(torch.nn.Module):
         target_exc = target_image
 
         #step 1
-        z_k_hat, img = self.step1(target_exc)
+        w_k_hat, img = self.step1(target_exc)
 
         #Can remove later
         print('Saving image')
-        img = self.G(z_k_hat, None)
+        img = self.G.synthesis(w_k_hat, None)
         im = self.genToPng(img)
         im.save('step1.png')
 
@@ -372,13 +340,13 @@ class LatentOptimizer(torch.nn.Module):
                 os.mkdir(str(res))
             os.remove(res+'/*')
             print('starting layer ', i, 'with a resolution of ', str(res))
-            block_ws, z_k_hat, gen_img = self.invert_(z_k_hat, img, target_exc, res)
+            w_k_hat, gen_img = self.invert_(w_k_hat, img, target_exc, res)
 
 
 
 
         print('outputting best image')
-        img = self.G(z_k_hat, None)
+        img = self.G(w_k_hat, None)
         im = self.genToPng(img)
         im.save('final.png')
-        return z_k_hat, target_image
+        return w_k_hat, target_image
