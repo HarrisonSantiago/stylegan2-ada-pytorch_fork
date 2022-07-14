@@ -305,8 +305,8 @@ class LatentOptimizer(torch.nn.Module):
         mse_min = np.inf
 
         for step in range(num_steps):
-
-            gen_img = self.G.synthesis(w_opt, noise_mode='const')
+            ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
+            gen_img = self.G.synthesis(ws, noise_mode='const')
             gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
             #gen_exc = ISETBio[]
