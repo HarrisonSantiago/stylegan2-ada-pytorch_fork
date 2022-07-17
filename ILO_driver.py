@@ -406,11 +406,14 @@ class LatentOptimizer(torch.nn.Module):
                     break
 
             targ_w = block_ws[i]
-            optim = torch.optim.Adam([targ_w], lr = 0.05)
+            holder = torch.ones(block_ws[i].shape, device = "cuda", requires_grad = True)
+            holder = holder * block_ws[i].clone()
+
+            optim = torch.optim.Adam([holder], lr = 0.05)
             max_loss = np.inf
             loss_tracker = []
             for _ in range(100):
-                gen_img = self.inner(targ_w, block_res, block_ws, res, x, img)
+                gen_img = self.inner(holder, block_res, block_ws, res, x, img)
                 gen_exc = gen_img
                 
                 loss = torch.sum(torch.square(target_exc - gen_exc))
