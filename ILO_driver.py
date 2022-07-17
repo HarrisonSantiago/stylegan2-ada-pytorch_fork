@@ -406,8 +406,8 @@ class LatentOptimizer(torch.nn.Module):
                     break
 
             targ_w = block_ws[i]
-            holder = torch.ones(block_ws[i].shape, device = "cuda", requires_grad = True).cuda()
-            holder = holder * block_ws[i].clone()
+            holder = torch.ones(block_ws[i].shape, device = "cuda", requires_grad = True)
+            holder = holder * block_ws[i].detach().clone()
 
             optim = torch.optim.Adam([holder], lr = 0.05)
             max_loss = np.inf
