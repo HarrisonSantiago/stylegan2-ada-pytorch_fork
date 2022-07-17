@@ -423,7 +423,7 @@ class LatentOptimizer(torch.nn.Module):
                 loss_tracker.append(loss.detach().cpu())
 
                 if loss < max_loss:
-                    best_w = targ_w
+                    best_w = holder
                     max_loss = loss
                     best_img = gen_img
 
