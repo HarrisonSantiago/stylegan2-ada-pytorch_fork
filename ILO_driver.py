@@ -420,7 +420,7 @@ class LatentOptimizer(torch.nn.Module):
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
                 gen_exc = gen_img
                 
-                loss = torch.sum(torch.square(target_exc - gen_exc))
+                loss = torch.sum(torch.square(target_exc[0] - gen_exc))
                 loss_tracker.append(loss.detach().cpu())
 
                 if loss < max_loss:
