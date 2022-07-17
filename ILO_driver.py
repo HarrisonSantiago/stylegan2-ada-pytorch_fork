@@ -402,7 +402,7 @@ class LatentOptimizer(torch.nn.Module):
                 if res1 < res:
                     print(res1)
                     print(cur_w1.shape)
-                    block = getattr(self.G.synthesis, f'b{res}')
+                    block = getattr(self.G.synthesis, f'b{res1}')
                     x, img = block(x, img, cur_w1, {})
                 else:
                     break
