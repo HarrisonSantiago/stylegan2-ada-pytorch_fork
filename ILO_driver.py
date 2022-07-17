@@ -428,7 +428,7 @@ class LatentOptimizer(torch.nn.Module):
                     best_img = gen_img
 
                 optim.zero_grad()
-                loss.backward()
+                loss.backward(retain_graph=True)
                 optim.step()
 
             block_ws[i] = best_w
