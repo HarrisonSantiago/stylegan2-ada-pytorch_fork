@@ -400,6 +400,8 @@ class LatentOptimizer(torch.nn.Module):
             x = img = None
             for res1, cur_w1 in zip(block_res, block_ws):
                 if res1 < res:
+                    print(res1)
+                    print(cur_w1.shape)
                     block = getattr(self.G.synthesis, f'b{res}')
                     x, img = block(x, img, cur_w1, {})
                 else:
