@@ -380,3 +380,69 @@ class LatentOptimizer(torch.nn.Module):
         im = self.genToPng(img)
         im.save('final.png')
         return w_k_hat, target_image
+
+    def alternate_solver(self, ws, target_exc):
+        block_ws = []
+        with torch.autograd.profiler.record_function('split_ws'):
+            misc.assert_shape(ws, [None, self.G.num_ws, self.G.w_dim])
+            ws = ws.to(torch.float32)
+            w_idx = 0
+            for res in self.G.synthesis.block_resolutions:  # up to certain layer
+                block = getattr(self.G.synthesis, f'b{res}')
+                block_ws.append(ws.narrow(1, w_idx, block.num_conv + block.num_torgb))
+                w_idx += block.num_conv
+
+
+        block_res = self.G.synthesis.block_resolutions
+        for res, i in zip(block_res, range(len(block_ws))): # this is the res we optimize over
+
+            #generate up to the current res using optimal ws
+            x = img = None
+            for res1, cur_w1 in zip(block_res, block_ws):
+                if res1 < res:
+                    block = getattr(self.G.synthesis, f'b{res}')
+                    x, img = block(x, img, cur_w1, {})
+                else:
+                    break
+
+            targ_w = block_ws[i]
+            optim = torch.optim.Adam([targ_w], learning_rate = 0.05)
+            max_loss = np.inf
+            loss_tracker = []
+            for _ in range(100):
+                gen_img = self.inner(targ_w, block_res, block_ws, res, x, img)
+                gen_exc = gen_img
+                
+                loss = torch.sum(torch.square(target_exc - gen_exc))
+                loss_tracker.append(loss.detach().cpu())
+
+                if loss < max_loss:
+                    best_w = targ_w
+                    max_loss = loss
+                    best_img = gen_img
+
+                optim.zero_grad()
+                loss.backward()
+                optim.step()
+
+            block_ws[i] = best_w
+
+        return best_img
+
+
+
+    def inner(self, targ_w, block_res, block_ws, res_start, x, img):
+        #modified G2, returns the block w value and gen img
+
+
+        for res, cur_ws in zip(block_res, block_ws):
+            if res == res_start:
+                block = getattr(self.G.synthesis, f'b{res}')
+                x, img = block(x, img, targ_w, {})
+            if res > res_start:
+                block = getattr(self.G.synthesis, f'b{res}')
+                x, img = block(x, img, cur_ws, {})
+
+
+        return img
+
