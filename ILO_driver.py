@@ -406,7 +406,7 @@ class LatentOptimizer(torch.nn.Module):
                     break
 
             targ_w = block_ws[i]
-            optim = torch.optim.Adam([targ_w], learning_rate = 0.05)
+            optim = torch.optim.Adam([targ_w], lr = 0.05)
             max_loss = np.inf
             loss_tracker = []
             for _ in range(100):
