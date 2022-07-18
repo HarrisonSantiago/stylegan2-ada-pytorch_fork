@@ -394,12 +394,10 @@ class LatentOptimizer(torch.nn.Module):
         for i in range(ws.shape[1]-1):
             w_opt = torch.tensor(ws[i], dtype=torch.float32, device="cuda", requires_grad=True)
             optimizer = torch.optim.Adam([w_opt])
-
+            to_synt = ws
             for step in range(num_steps):
 
-                to_synt = ws
                 to_synt[i] = w_opt
-
                 print('to synth shape', to_synt.shape)
                 gen_img = self.G.synthesis(to_synt, noise_mode='const')
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
