@@ -416,11 +416,14 @@ class LatentOptimizer(torch.nn.Module):
                 if loss < max_loss:
                     best_w = holder
                     max_loss = loss
-                    best_img = gen_img[0]
+                    best_img = gen_img
 
                 optim.zero_grad()
                 loss.backward()
                 optim.step()
+
+            im = self.genToPng(best_img)
+            im.save(str(i)+'.png')
 
             block_ws[i] = best_w
 
