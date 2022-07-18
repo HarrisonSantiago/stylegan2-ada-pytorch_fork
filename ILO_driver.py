@@ -395,7 +395,7 @@ class LatentOptimizer(torch.nn.Module):
             w_opt = torch.tensor(ws[i], dtype=torch.float32, device="cuda", requires_grad=True)
             optimizer = torch.optim.Adam([w_opt])
 
-            for step in num_steps:
+            for step in range(num_steps):
 
                 to_synt = ws
                 to_synt[i] = w_opt
