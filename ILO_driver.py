@@ -393,7 +393,7 @@ class LatentOptimizer(torch.nn.Module):
 
         for i in range(ws.shape[1]-1):
 
-            w_opt = ws[i].clone().detach().requires_grad_(True)
+            w_opt = ws[0,i,:].clone().detach().requires_grad_(True)
             optimizer = torch.optim.Adam([w_opt])
             to_synt = ws
             for step in range(num_steps):
