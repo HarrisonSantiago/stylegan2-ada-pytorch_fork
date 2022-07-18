@@ -431,7 +431,7 @@ class LatentOptimizer(torch.nn.Module):
     def inner(self, targ_w, block_res, block_ws, target_res):
         #modified G2, returns the block w value and gen img
 
-        x, img = None
+        x = img = None
         for res, cur_ws in zip(block_res, block_ws):
             if res == target_res:
                 block = getattr(self.G.synthesis, f'b{res}')
