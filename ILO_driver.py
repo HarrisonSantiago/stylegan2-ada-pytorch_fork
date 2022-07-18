@@ -428,7 +428,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
 
-    def inner(self, targ_w, block_res, block_ws, target_res, x, img):
+    def inner(self, targ_w, block_res, block_ws, target_res):
         #modified G2, returns the block w value and gen img
 
         x, img = None
