@@ -336,6 +336,8 @@ class LatentOptimizer(torch.nn.Module):
         plt.ylabel('loss')
         plt.show()
 
+        print('num ws: ', self.G.mapping.num_ws)
+        print('best_w shape', best_w.shape)
 
         return best_w, best_img
 
