@@ -404,12 +404,11 @@ class LatentOptimizer(torch.nn.Module):
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
                 gen_exc = gen_img
-
                 loss = loss_fcn(gen_exc[0], target_exc)
-
                 loss_tracker.append(loss.detach().cpu())
+
                 optimizer.zero_grad()
-                loss.backward()
+                loss.backward(retain_graph = True)
                 optimizer.step()
 
                 if loss < mse_min:
