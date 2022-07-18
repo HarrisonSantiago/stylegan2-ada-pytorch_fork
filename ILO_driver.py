@@ -389,7 +389,7 @@ class LatentOptimizer(torch.nn.Module):
         mse_min = np.inf
         loss_tracker = []
         num_steps = 100
-        ws = ws.detach().copy()
+        ws = ws.detach().clone()
 
         for i in range(ws.shape[1]-1):
             w_opt = torch.tensor(ws[i], dtype=torch.float32, device="cuda", requires_grad=True)
@@ -418,7 +418,7 @@ class LatentOptimizer(torch.nn.Module):
 
                 if loss < mse_min:
                     mse_min = loss
-                    best_w = w_opt
+                    best_w = w_opt.detach().clone()
                     best_img = gen_img
 
             ws[i] = best_w
