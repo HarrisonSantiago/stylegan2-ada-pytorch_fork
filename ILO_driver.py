@@ -416,7 +416,9 @@ class LatentOptimizer(torch.nn.Module):
                     best_w = w_opt.detach().clone()
                     best_img = gen_img
 
-            ws[i] = best_w
+            im = self.genToPng(best_img)
+            im.save(str(i)+'.png')
+            ws[0,i] = best_w
 
         #block_ws = []
         #with torch.autograd.profiler.record_function('split_ws'):
