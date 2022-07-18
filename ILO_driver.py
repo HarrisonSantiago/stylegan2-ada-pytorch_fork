@@ -306,6 +306,7 @@ class LatentOptimizer(torch.nn.Module):
 
         for step in range(num_steps):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
+
             gen_img = self.G.synthesis(ws, noise_mode='const')
             gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
@@ -394,6 +395,7 @@ class LatentOptimizer(torch.nn.Module):
         for i in range(1,ws.shape[1]-1):
 
             w_opt = ws[0,i,:].clone().detach().requires_grad_(True)
+            print('w_opt sjape', w_opt.shape)
             optimizer = torch.optim.Adam([w_opt])
             to_synt = ws
             for step in range(num_steps):
@@ -416,6 +418,8 @@ class LatentOptimizer(torch.nn.Module):
                     best_w = w_opt.detach().clone()
                     best_img = gen_img
 
+            plt.plot(loss_tracker)
+            plt.show()
             im = self.genToPng(best_img)
             im.save(str(i)+'.png')
             ws[0,i] = best_w
