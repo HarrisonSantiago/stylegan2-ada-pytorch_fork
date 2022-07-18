@@ -382,6 +382,7 @@ class LatentOptimizer(torch.nn.Module):
         return w_k_hat, target_image
 
     def alternate_solver(self, ws, target_exc):
+
         block_ws = []
         with torch.autograd.profiler.record_function('split_ws'):
             misc.assert_shape(ws, [None, self.G.num_ws, self.G.w_dim])
@@ -392,9 +393,10 @@ class LatentOptimizer(torch.nn.Module):
                 block_ws.append(ws.narrow(1, w_idx, block.num_conv + block.num_torgb))
                 w_idx += block.num_conv
 
-
+        loss_fcn = nn.MSELoss()
         block_res = self.G.synthesis.block_resolutions
         for res, i in zip(block_res, range(len(block_ws))): # this is the res we optimize over
+            print('going for res: ', res)
 
             #generate up to the current res using optimal ws
             x = img = None
@@ -407,7 +409,7 @@ class LatentOptimizer(torch.nn.Module):
                 else:
                     break
 
-            targ_w = block_ws[i]
+
             holder = block_ws[i].clone().detach()
             holder = torch.tensor(holder, device = "cuda", requires_grad = True)
 
@@ -420,7 +422,7 @@ class LatentOptimizer(torch.nn.Module):
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
                 gen_exc = gen_img
                 
-                loss = torch.sum(torch.square(target_exc - gen_exc[0]))
+                loss = loss_fcn(target_exc, gen_exc[0])
                 loss_tracker.append(loss.detach().cpu())
 
                 if loss < max_loss:
@@ -429,7 +431,7 @@ class LatentOptimizer(torch.nn.Module):
                     best_img = gen_img
 
                 optim.zero_grad()
-                loss.backward(retain_graph=True)
+                loss.backward()
                 optim.step()
 
             block_ws[i] = best_w
