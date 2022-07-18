@@ -400,6 +400,7 @@ class LatentOptimizer(torch.nn.Module):
         block_res = self.G.synthesis.block_resolutions
         for res, i in zip(block_res, range(len(block_ws))): # this is the res we optimize over
             print('going for res: ', res)
+            print('block ', str(i), 'shape', block_ws[i].shape)
 
             holder = block_ws[i].clone().detach()
             holder = torch.tensor(holder, device = "cuda", requires_grad = True)
@@ -439,8 +440,8 @@ class LatentOptimizer(torch.nn.Module):
 
         x = img = None
         for res, cur_ws in zip(block_res, block_ws):
-            print('target_res: ', target_res)
-            print('cur res: ', res)
+            #print('target_res: ', target_res)
+            #print('cur res: ', res)
             if res == target_res:
                 block = getattr(self.G.synthesis, f'b{res}')
                 x, img = block(x, img, targ_w, {})
