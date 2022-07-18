@@ -406,7 +406,7 @@ class LatentOptimizer(torch.nn.Module):
             max_loss = np.inf
             loss_tracker = []
             for _ in range(100):
-                gen_img = self.inner(holder, block_res, block_ws, res, x, img)
+                gen_img = self.inner(holder, block_res, block_ws, res)
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
                 gen_exc = gen_img
                 
