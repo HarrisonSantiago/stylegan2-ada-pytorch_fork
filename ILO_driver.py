@@ -393,6 +393,9 @@ class LatentOptimizer(torch.nn.Module):
                 block_ws.append(ws.narrow(1, w_idx, block.num_conv + block.num_torgb))
                 w_idx += block.num_conv
 
+        print('len block_ws: ', len(block_ws))
+        print('shape ws: ', ws.shape)
+        print('block 0 shape', block_ws[0].shape)
         loss_fcn = nn.MSELoss()
         block_res = self.G.synthesis.block_resolutions
         for res, i in zip(block_res, range(len(block_ws))): # this is the res we optimize over
@@ -406,6 +409,7 @@ class LatentOptimizer(torch.nn.Module):
             max_loss = np.inf
             loss_tracker = []
             for _ in range(100):
+                copy = holder.clone()
                 gen_img = self.inner(holder, block_res, block_ws, res)
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
                 gen_exc = gen_img
@@ -414,7 +418,7 @@ class LatentOptimizer(torch.nn.Module):
                 loss_tracker.append(loss.detach().cpu())
 
                 if loss < max_loss:
-                    best_w = holder
+                    best_w = copy
                     max_loss = loss
                     best_img = gen_img
 
@@ -432,7 +436,6 @@ class LatentOptimizer(torch.nn.Module):
 
 
     def inner(self, targ_w, block_res, block_ws, target_res):
-        #modified G2, returns the block w value and gen img
 
         x = img = None
         for res, cur_ws in zip(block_res, block_ws):
