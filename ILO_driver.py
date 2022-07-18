@@ -385,54 +385,92 @@ class LatentOptimizer(torch.nn.Module):
 
     def alternate_solver(self, ws, target_exc):
 
-        block_ws = []
-        with torch.autograd.profiler.record_function('split_ws'):
-            misc.assert_shape(ws, [None, self.G.num_ws, self.G.w_dim])
-            ws = ws.to(torch.float32)
-            w_idx = 0
-            for res in self.G.synthesis.block_resolutions:  # up to certain layer
-                block = getattr(self.G.synthesis, f'b{res}')
-                block_ws.append(ws.narrow(1, w_idx, block.num_conv + block.num_torgb))
-                w_idx += block.num_conv
-
-        print('len block_ws: ', len(block_ws))
-        print('shape ws: ', ws.shape)
-        print('block 0 shape', block_ws[0].shape)
         loss_fcn = nn.MSELoss()
-        block_res = self.G.synthesis.block_resolutions
-        for res, i in zip(block_res, range(len(block_ws))): # this is the res we optimize over
-            print('going for res: ', res)
-            print('block ', str(i), 'shape', block_ws[i].shape)
+        mse_min = np.inf
+        loss_tracker = []
+        num_steps = 100
+        ws = ws.detach().copy()
 
-            holder = block_ws[i].clone().detach()
-            holder = torch.tensor(holder, device = "cuda", requires_grad = True)
+        for i in range(ws.shape[1]-1):
+            w_opt = torch.tensor(ws[i], dtype=torch.float32, device="cuda", requires_grad=True)
+            optimizer = torch.optim.Adam([w_opt])
 
+            for step in num_steps:
 
-            optim = torch.optim.Adam([holder], lr = 0.05)
-            max_loss = np.inf
-            loss_tracker = []
-            for _ in range(100):
-                copy = holder.clone()
-                gen_img = self.inner(holder, block_res, block_ws, res)
+                to_synt = ws
+                to_synt[i] = w_opt
+
+                print('to synth shape', to_synt.shape)
+                gen_img = self.G.synthesis(to_synt, noise_mode='const')
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
-                gen_exc = gen_img
-                #print(gen_exc.shape)
-                loss = loss_fcn(target_exc, gen_exc[0])
-                loss_tracker.append(loss.detach().cpu())
 
-                if loss < max_loss:
-                    best_w = copy
-                    max_loss = loss
+                # gen_exc = ISETBio[]
+                gen_exc = gen_img
+
+                # print('shape: ', gen_exc.shape)
+                # print('t shape: ', target_exc.shape)
+                loss = loss_fcn(gen_exc[0], target_exc)
+
+                loss_tracker.append(loss.detach().cpu())
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                if loss < mse_min:
+                    mse_min = loss
+                    best_w = w_opt
                     best_img = gen_img
 
-                optim.zero_grad()
-                loss.backward()
-                optim.step()
+            ws[i] = best_w
 
-            im = self.genToPng(best_img)
-            im.save(str(i)+'.png')
-
-            block_ws[i] = best_w
+        #block_ws = []
+        #with torch.autograd.profiler.record_function('split_ws'):
+        #    misc.assert_shape(ws, [None, self.G.num_ws, self.G.w_dim])
+        #    ws = ws.to(torch.float32)
+        #    w_idx = 0
+        #    for res in self.G.synthesis.block_resolutions:  # up to certain layer
+        #        block = getattr(self.G.synthesis, f'b{res}')
+        #        block_ws.append(ws.narrow(1, w_idx, block.num_conv + block.num_torgb))
+        #        w_idx += block.num_conv
+#
+        #print('len block_ws: ', len(block_ws))
+        #print('shape ws: ', ws.shape)
+        #print('block 0 shape', block_ws[0].shape)
+        #loss_fcn = nn.MSELoss()
+        #block_res = self.G.synthesis.block_resolutions
+        #for res, i in zip(block_res, range(len(block_ws))): # this is the res we optimize over
+        #    print('going for res: ', res)
+        #    print('block ', str(i), 'shape', block_ws[i].shape)
+#
+        #    holder = block_ws[i].clone().detach()
+        #    holder = torch.tensor(holder, device = "cuda", requires_grad = True)
+#
+#
+        #    optim = torch.optim.Adam([holder], lr = 0.05)
+        #    max_loss = np.inf
+        #    loss_tracker = []
+        #    for _ in range(100):
+        #        copy = holder.clone()
+        #        gen_img = self.inner(holder, block_res, block_ws, res)
+        #        gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
+        #        gen_exc = gen_img
+        #        #print(gen_exc.shape)
+        #        loss = loss_fcn(target_exc, gen_exc[0])
+        #        loss_tracker.append(loss.detach().cpu())
+#
+        #        if loss < max_loss:
+        #            best_w = copy
+        #            max_loss = loss
+        #            best_img = gen_img
+#
+        #        optim.zero_grad()
+        #        loss.backward()
+        #        optim.step()
+#
+        #    im = self.genToPng(best_img)
+        #    im.save(str(i)+'.png')
+#
+        #    block_ws[i] = best_w
 
         return best_img
 
