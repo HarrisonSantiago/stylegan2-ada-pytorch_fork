@@ -398,18 +398,6 @@ class LatentOptimizer(torch.nn.Module):
         for res, i in zip(block_res, range(len(block_ws))): # this is the res we optimize over
             print('going for res: ', res)
 
-            #generate up to the current res using optimal ws
-            x = img = None
-            for res1, cur_w1 in zip(block_res, block_ws):
-                if res1 < res:
-                    print(res1)
-                    print(cur_w1.shape)
-                    block = getattr(self.G.synthesis, f'b{res1}')
-                    x, img = block(x, img, cur_w1, {})
-                else:
-                    break
-
-
             holder = block_ws[i].clone().detach()
             holder = torch.tensor(holder, device = "cuda", requires_grad = True)
 
@@ -440,15 +428,15 @@ class LatentOptimizer(torch.nn.Module):
 
 
 
-    def inner(self, targ_w, block_res, block_ws, res_start, x, img):
+    def inner(self, targ_w, block_res, block_ws, target_res, x, img):
         #modified G2, returns the block w value and gen img
 
-
+        x, img = None
         for res, cur_ws in zip(block_res, block_ws):
-            if res == res_start:
+            if res == target_res:
                 block = getattr(self.G.synthesis, f'b{res}')
                 x, img = block(x, img, targ_w, {})
-            if res > res_start:
+            else:
                 block = getattr(self.G.synthesis, f'b{res}')
                 x, img = block(x, img, cur_ws, {})
 
