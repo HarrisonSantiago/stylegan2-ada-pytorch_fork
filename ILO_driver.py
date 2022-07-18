@@ -392,7 +392,8 @@ class LatentOptimizer(torch.nn.Module):
         ws = ws.detach().clone()
 
         for i in range(ws.shape[1]-1):
-            w_opt = torch.tensor(ws[i], dtype=torch.float32, device="cuda", requires_grad=True)
+
+            w_opt = ws[i].clone().detach().requires_grad_(True)
             optimizer = torch.optim.Adam([w_opt])
             to_synt = ws
             for step in range(num_steps):
@@ -402,11 +403,8 @@ class LatentOptimizer(torch.nn.Module):
                 gen_img = self.G.synthesis(to_synt, noise_mode='const')
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
-                # gen_exc = ISETBio[]
                 gen_exc = gen_img
 
-                # print('shape: ', gen_exc.shape)
-                # print('t shape: ', target_exc.shape)
                 loss = loss_fcn(gen_exc[0], target_exc)
 
                 loss_tracker.append(loss.detach().cpu())
