@@ -416,7 +416,7 @@ class LatentOptimizer(torch.nn.Module):
                 if loss < max_loss:
                     best_w = holder
                     max_loss = loss
-                    best_img = gen_img
+                    best_img = gen_img[0]
 
                 optim.zero_grad()
                 loss.backward()
