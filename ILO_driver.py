@@ -389,7 +389,7 @@ class LatentOptimizer(torch.nn.Module):
         loss_fcn = nn.MSELoss()
         mse_min = np.inf
         loss_tracker = []
-        num_steps = 100
+        num_steps = 300
         ws = ws.detach().clone()
 
         for i in range(1,ws.shape[1]-1):
@@ -401,7 +401,7 @@ class LatentOptimizer(torch.nn.Module):
             for step in range(num_steps):
 
                 to_synt[0,i] = w_opt
-                print('to synth shape', to_synt.shape)
+                #print('to synth shape', to_synt.shape)
                 gen_img = self.G.synthesis(to_synt, noise_mode='const')
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
