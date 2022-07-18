@@ -436,6 +436,8 @@ class LatentOptimizer(torch.nn.Module):
 
         x = img = None
         for res, cur_ws in zip(block_res, block_ws):
+            print('target_res: ', target_res)
+            print('cur res: ', res)
             if res == target_res:
                 block = getattr(self.G.synthesis, f'b{res}')
                 x, img = block(x, img, targ_w, {})
