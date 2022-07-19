@@ -416,7 +416,8 @@ class LatentOptimizer(torch.nn.Module):
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
-
+                print('loss', loss)
+                print(w_opt.shape)
                 if loss < mse_min:
                     mse_min = loss
                     best_w = w_opt.detach().clone()
