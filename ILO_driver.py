@@ -397,6 +397,7 @@ class LatentOptimizer(torch.nn.Module):
             print(i)
 
             w_opt = None
+            ws[0,i] = ws[0,i].requires_grad_(True)
             w_opt = torch.tensor(ws[0,i], dtype=torch.float32, device="cuda", requires_grad=True)
 
             print('w_opt sjape', w_opt.shape)
