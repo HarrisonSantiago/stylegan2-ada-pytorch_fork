@@ -407,7 +407,7 @@ class LatentOptimizer(torch.nn.Module):
             end = torch.unsqueeze(ws[0, i + 1:], dim =0)
 
             for step in range(num_steps):
-                mid = torch.unsqueeze(torch.unsqueeze(w_opt[0, i], dim=0), dim=0)
+                mid = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
 
                 to_synt = torch.cat((beg, mid, end), dim = 1)
                 #to_synt = w_opt.repeat([1, self.G.mapping.num_ws, 1])
