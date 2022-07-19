@@ -427,10 +427,12 @@ class LatentOptimizer(torch.nn.Module):
 
             plt.plot(loss_tracker)
             plt.show()
-            im = self.genToPng(best_img)
-            im.save(str(i)+'.png')
+
             ws[0,i] = best_w
 
+            img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+            im = self.genToPng(img)
+            im.save(str(i) +'.png')
         #block_ws = []
         #with torch.autograd.profiler.record_function('split_ws'):
         #    misc.assert_shape(ws, [None, self.G.num_ws, self.G.w_dim])
