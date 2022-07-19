@@ -397,15 +397,19 @@ class LatentOptimizer(torch.nn.Module):
             print(i)
 
             w_opt = None
-            ws[0,i] = torch.tensor(ws[0,i], dtype=torch.float32, device="cuda", requires_grad=True)
+            w_opt = torch.tensor(ws[0,i], dtype=torch.float32, device="cuda", requires_grad=True)
 
             #print('w_opt sjape', w_opt.shape)
-            optimizer = torch.optim.Adam([ws[0,i]], betas=(0.9, 0.999), lr=0.05)
+            optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
             #to_synt = ws
             #print('to synt shape', to_synt.shape)
+            beg = torch.unsqueeze(ws[0, :i], dim = 0)
+            end = torch.unsqueeze(ws[0, i + 1:], dim =0)
+
             for step in range(num_steps):
-                to_synt = ws
-                #to_synt[0,i] = w_opt
+                mid = torch.unsqueeze(torch.unsqueeze(w_opt[0, i], dim=0), dim=0)
+
+                to_synt = torch.cat((beg, mid, end), dim = 1)
                 #to_synt = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
                 gen_img = self.G.synthesis(to_synt, noise_mode='const')
