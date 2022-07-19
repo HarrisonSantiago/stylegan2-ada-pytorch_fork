@@ -399,7 +399,7 @@ class LatentOptimizer(torch.nn.Module):
             w_opt = None
             ws[0,i] = torch.tensor(ws[0,i], dtype=torch.float32, device="cuda", requires_grad=True)
 
-            print('w_opt sjape', w_opt.shape)
+            #print('w_opt sjape', w_opt.shape)
             optimizer = torch.optim.Adam([ws[0,i]], betas=(0.9, 0.999), lr=0.05)
             #to_synt = ws
             #print('to synt shape', to_synt.shape)
@@ -419,10 +419,10 @@ class LatentOptimizer(torch.nn.Module):
                 loss.backward()
                 optimizer.step()
                 print('loss', loss)
-                print(w_opt.shape)
+                #print(w_opt.shape)
                 if loss < mse_min:
                     mse_min = loss
-                    best_w = w_opt.detach().clone()
+                    best_w = to_synt[0,i].detach().clone()
                     best_img = gen_img
 
             plt.plot(loss_tracker)
