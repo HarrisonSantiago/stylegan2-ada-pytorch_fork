@@ -58,7 +58,7 @@ class LatentOptimizer(torch.nn.Module):
         self.config = config
         #---creates matlab engine---
         self.engine = matlab.engine.start_matlab()
-        self.engine.init() #loads ISETBio stuff and creates the retina object
+        self.engine.init(nargout = 0) #loads ISETBio stuff and creates the retina object
 
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
