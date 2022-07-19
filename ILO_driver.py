@@ -18,19 +18,9 @@ from torch_utils import misc
 
 from utils import *
 import copy
+import matlab.engine
 
-#EXAMPLES
-#w = G.mapping(z, c, truncation_psi=0.5, truncation_cutoff=8)
-#img = G.synthesis(w, noise_mode='const', force_fp32=True)
 
-#def make_noise(device : torch.device, bs=1):
-#   noises = [torch.randn(bs, 1, 2 ** 2, 2 ** 2, device=device)]
-
-#   for i in range(3, self.log_size + 1):
-#       for _ in range(2):
-#           noises.append(torch.randn(bs, 1, 2 ** i, 2 ** i, device=device))
-
-#   return noises
 
 def get_transformation(image_size):
     return transforms.Compose(
@@ -66,6 +56,9 @@ class LatentOptimizer(torch.nn.Module):
     def __init__(self, config, Generator, device=torch.device):
         super().__init__()
         self.config = config
+        #---creates matlab engine---
+        self.engine = matlab.engine.start_matlab()
+        self.engine.init() #loads ISETBio stuff and creates the retina object
 
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
@@ -391,18 +384,13 @@ class LatentOptimizer(torch.nn.Module):
         loss_tracker = []
         num_steps = 300
         ws = ws.detach().clone()
-        print('ws shape:', ws.shape)
 
         for i in range(1,ws.shape[1]-1):
-            print(i)
 
-            w_opt = None
             w_opt = torch.tensor(ws[0,i], dtype=torch.float32, device="cuda", requires_grad=True)
 
-            #print('w_opt sjape', w_opt.shape)
             optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
-            #to_synt = ws
-            #print('to synt shape', to_synt.shape)
+
             beg = torch.unsqueeze(ws[0, :i], dim = 0)
             end = torch.unsqueeze(ws[0, i + 1:], dim =0)
 
@@ -410,20 +398,30 @@ class LatentOptimizer(torch.nn.Module):
                 mid = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
 
                 to_synt = torch.cat((beg, mid, end), dim = 1)
-                #to_synt = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
                 gen_img = self.G.synthesis(to_synt, noise_mode='const')
-                gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
-                gen_exc = gen_img
+                im = self.genToPng(gen_img)
+                im.save('curr_guess.png')
 
-                loss = loss_fcn(gen_exc[0], target_exc)
+
+                #current
+                gen_exc = None
+                loss = loss_fcn(gen_exc, target_exc)
+
+                #---- Start of what worked for sure, not actually using exc
+                #gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
+                #gen_exc = gen_img
+#
+                #loss = loss_fcn(gen_exc[0], target_exc)
+                #----- End of what worked for sure
+
                 loss_tracker.append(loss.detach().cpu())
 
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 print('loss', loss)
-                #print(w_opt.shape)
+
                 if loss < mse_min:
                     mse_min = loss
                     best_w = to_synt[0,i].detach().clone()
@@ -437,72 +435,26 @@ class LatentOptimizer(torch.nn.Module):
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
             im = self.genToPng(img)
             im.save(str(i) +'.png')
-        #block_ws = []
-        #with torch.autograd.profiler.record_function('split_ws'):
-        #    misc.assert_shape(ws, [None, self.G.num_ws, self.G.w_dim])
-        #    ws = ws.to(torch.float32)
-        #    w_idx = 0
-        #    for res in self.G.synthesis.block_resolutions:  # up to certain layer
-        #        block = getattr(self.G.synthesis, f'b{res}')
-        #        block_ws.append(ws.narrow(1, w_idx, block.num_conv + block.num_torgb))
-        #        w_idx += block.num_conv
-#
-        #print('len block_ws: ', len(block_ws))
-        #print('shape ws: ', ws.shape)
-        #print('block 0 shape', block_ws[0].shape)
-        #loss_fcn = nn.MSELoss()
-        #block_res = self.G.synthesis.block_resolutions
-        #for res, i in zip(block_res, range(len(block_ws))): # this is the res we optimize over
-        #    print('going for res: ', res)
-        #    print('block ', str(i), 'shape', block_ws[i].shape)
-#
-        #    holder = block_ws[i].clone().detach()
-        #    holder = torch.tensor(holder, device = "cuda", requires_grad = True)
-#
-#
-        #    optim = torch.optim.Adam([holder], lr = 0.05)
-        #    max_loss = np.inf
-        #    loss_tracker = []
-        #    for _ in range(100):
-        #        copy = holder.clone()
-        #        gen_img = self.inner(holder, block_res, block_ws, res)
-        #        gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
-        #        gen_exc = gen_img
-        #        #print(gen_exc.shape)
-        #        loss = loss_fcn(target_exc, gen_exc[0])
-        #        loss_tracker.append(loss.detach().cpu())
-#
-        #        if loss < max_loss:
-        #            best_w = copy
-        #            max_loss = loss
-        #            best_img = gen_img
-#
-        #        optim.zero_grad()
-        #        loss.backward()
-        #        optim.step()
-#
-        #    im = self.genToPng(best_img)
-        #    im.save(str(i)+'.png')
-#
-        #    block_ws[i] = best_w
 
         return best_img
 
 
 
-    def inner(self, targ_w, block_res, block_ws, target_res):
+    #def inner(self, targ_w, block_res, block_ws, target_res):
+#
+    #    x = img = None
+    #    for res, cur_ws in zip(block_res, block_ws):
+    #        #print('target_res: ', target_res)
+    #        #print('cur res: ', res)
+    #        if res == target_res:
+    #            block = getattr(self.G.synthesis, f'b{res}')
+    #            x, img = block(x, img, targ_w, {})
+    #        else:
+    #            block = getattr(self.G.synthesis, f'b{res}')
+    #            x, img = block(x, img, cur_ws, {})
+#
+#
+    #    return img
+#
 
-        x = img = None
-        for res, cur_ws in zip(block_res, block_ws):
-            #print('target_res: ', target_res)
-            #print('cur res: ', res)
-            if res == target_res:
-                block = getattr(self.G.synthesis, f'b{res}')
-                x, img = block(x, img, targ_w, {})
-            else:
-                block = getattr(self.G.synthesis, f'b{res}')
-                x, img = block(x, img, cur_ws, {})
-
-
-        return img
 
