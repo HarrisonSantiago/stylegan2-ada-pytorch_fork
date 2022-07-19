@@ -405,7 +405,9 @@ class LatentOptimizer(torch.nn.Module):
             print('to synt shape', to_synt.shape)
             for step in range(num_steps):
 
-                to_synt[0,i] = w_opt
+                #to_synt[0,i] = w_opt
+                to_synt = w_opt.repeat([1, self.G.mapping.num_ws, 1])
+
                 gen_img = self.G.synthesis(to_synt, noise_mode='const')
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
                 gen_exc = gen_img
