@@ -400,7 +400,7 @@ class LatentOptimizer(torch.nn.Module):
             w_opt = torch.tensor(ws[0,i], dtype=torch.float32, device="cuda", requires_grad=True)
 
             print('w_opt sjape', w_opt.shape)
-            optimizer = torch.optim.Adam([ws[i]], betas=(0.9, 0.999), lr=0.05)
+            optimizer = torch.optim.Adam([ws[0,i]], betas=(0.9, 0.999), lr=0.05)
             #to_synt = ws
             print('to synt shape', to_synt.shape)
             for step in range(num_steps):
