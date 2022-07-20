@@ -190,7 +190,7 @@ def open_cifar10_nolabel(tarball: str, *, max_images: Optional[int]):
 
     def iterate_images():
         for idx, img in enumerate(images):
-            yield dict(img=img)#, label=int(labels[idx]))
+            yield dict(img=img, label=None)#, label=int(labels[idx]))
             if idx >= max_idx-1:
                 break
 
