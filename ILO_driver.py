@@ -61,6 +61,8 @@ class LatentOptimizer(torch.nn.Module):
         print(self.engine.pwd())
         print(self.engine.ls())
         self.engine.init(nargout = 0) #loads ISETBio stuff and creates the retina object
+        print(self.engine.pwd())
+        print(self.engine.ls())
         self.targ_exc = self.engine.getConeResp(targ_path)
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
