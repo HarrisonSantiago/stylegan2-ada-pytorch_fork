@@ -314,7 +314,8 @@ class LatentOptimizer(torch.nn.Module):
             im = self.genToPng(img)
             im.save('current_guess.png')
 
-            gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png')))
+            gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png')),
+                                   dtype=torch.float32, device = "cuda", requires_grad = True)
 
             #print('shape: ', gen_exc.shape)
             #print('t shape: ', target_exc.shape)
