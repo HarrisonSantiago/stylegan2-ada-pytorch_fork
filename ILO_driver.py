@@ -60,7 +60,9 @@ class LatentOptimizer(torch.nn.Module):
         self.engine = matlab.engine.start_matlab()
         print(self.engine.pwd())
         print(self.engine.ls())
+        self.home_dir = self.engine.pwd()
         self.engine.init(nargout = 0) #loads ISETBio stuff and creates the retina object
+        self.engine.cd(self.home_dir)
         print(self.engine.pwd())
         print(self.engine.ls())
         self.targ_exc = self.engine.getConeResp(targ_path)
