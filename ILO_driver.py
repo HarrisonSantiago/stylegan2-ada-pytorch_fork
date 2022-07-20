@@ -58,14 +58,12 @@ class LatentOptimizer(torch.nn.Module):
         self.config = config
         #---creates matlab engine---
         self.engine = matlab.engine.start_matlab()
-        print(self.engine.pwd())
-        print(self.engine.ls())
+
         self.home_dir = self.engine.pwd()
         self.engine.init(self.home_dir, nargout = 0) #loads ISETBio stuff and creates the retina object
         self.engine.cd(self.home_dir)
-        print(self.engine.pwd())
-        print(self.engine.ls())
-        self.targ_exc = self.engine.getConeResp(targ_path)
+
+
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
 
@@ -283,8 +281,11 @@ class LatentOptimizer(torch.nn.Module):
 
 
 
-    def step1(self, target_exc, num_steps = 100, initial_learning_rate = 0.1, w_avg_samples = 10000 ):
+    def step1(self, targ_path, num_steps = 100, initial_learning_rate = 0.1, w_avg_samples = 10000 ):
         print('--- step 1 ---')
+
+        self.targ_exc = torch.tensor(np.asarray(self.engine.getConeResp(targ_path)))
+
         loss_tracker = []
 
         z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
@@ -313,12 +314,11 @@ class LatentOptimizer(torch.nn.Module):
             im = self.genToPng(img)
             im.save('current_guess.png')
 
-            gen_exc = self.engine.getConeResp('current_guess.png')
-
+            gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png')))
 
             #print('shape: ', gen_exc.shape)
             #print('t shape: ', target_exc.shape)
-            loss = loss_fcn(gen_exc[0], target_exc)
+            loss = loss_fcn(gen_exc, self.target_exc)
 
 
             loss_tracker.append(loss.detach().cpu())
