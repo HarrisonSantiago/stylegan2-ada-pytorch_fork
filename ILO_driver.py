@@ -318,7 +318,7 @@ class LatentOptimizer(torch.nn.Module):
 
             #print('shape: ', gen_exc.shape)
             #print('t shape: ', target_exc.shape)
-            loss = loss_fcn(gen_exc, self.target_exc)
+            loss = loss_fcn(gen_exc, self.targ_exc)
 
 
             loss_tracker.append(loss.detach().cpu())
