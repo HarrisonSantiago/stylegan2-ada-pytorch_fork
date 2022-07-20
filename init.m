@@ -1,4 +1,4 @@
-function = init(home_dir)
+function init(home_dir)
     disp("---Installing ISETImagePipeline for this engine---")
     tbUseProject('ISETImagePipeline');
     
