@@ -53,13 +53,13 @@ class SphericalOptimizer():
             param.mul_(self.radii[param])
 
 class LatentOptimizer(torch.nn.Module):
-    def __init__(self, config, Generator, device=torch.device):
+    def __init__(self, config, Generator, targ_path, device=torch.device):
         super().__init__()
         self.config = config
         #---creates matlab engine---
         self.engine = matlab.engine.start_matlab()
         self.engine.init(nargout = 0) #loads ISETBio stuff and creates the retina object
-
+        self.targ_exc = self.engine.getConeResp(targ_path)
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
 
@@ -303,8 +303,12 @@ class LatentOptimizer(torch.nn.Module):
             gen_img = self.G.synthesis(ws, noise_mode='const')
             gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
-            #gen_exc = ISETBio[]
-            gen_exc = gen_img
+            img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+            im = self.genToPng(img)
+            im.save('current_guess.png')
+
+            gen_exc = self.engine.getConeResp('current_guess.png')
+
 
             #print('shape: ', gen_exc.shape)
             #print('t shape: ', target_exc.shape)
