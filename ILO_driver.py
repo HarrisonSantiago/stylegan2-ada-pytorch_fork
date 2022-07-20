@@ -284,7 +284,8 @@ class LatentOptimizer(torch.nn.Module):
     def step1(self, targ_path, num_steps = 100, initial_learning_rate = 0.1, w_avg_samples = 10000 ):
         print('--- step 1 ---')
 
-        self.targ_exc = torch.tensor(np.asarray(self.engine.getConeResp(targ_path)))
+        self.targ_exc = torch.tensor(np.asarray(self.engine.getConeResp(targ_path)),
+                                     dtype=torch.float32, device="cuda")
 
         loss_tracker = []
 
