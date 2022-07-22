@@ -389,7 +389,7 @@ class LatentOptimizer(torch.nn.Module):
         im.save('final.png')
         return w_k_hat, target_image
 
-    def alternate_solver(self, ws, target_exc):
+    def alternate_solver(self, ws):
 
         loss_fcn = nn.MSELoss()
         mse_min = np.inf
@@ -417,8 +417,9 @@ class LatentOptimizer(torch.nn.Module):
 
 
                 #current
-                gen_exc = None
-                loss = loss_fcn(gen_exc, target_exc)
+                gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('curr_guess.png')),
+                                       dtype=torch.float32, device="cuda", requires_grad=True)
+                loss = loss_fcn(gen_exc, self.targ_exc)
 
                 #---- Start of what worked for sure, not actually using exc
                 #gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
