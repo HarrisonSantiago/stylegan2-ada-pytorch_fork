@@ -474,6 +474,7 @@ class LatentOptimizer(torch.nn.Module):
         optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=initial_learning_rate)
         #loss_fcn = nn.MSELoss()
         loss_fcn = lpips.LPIPS(net ='vgg')
+        loss_fcn.cuda()
         mse_min = np.inf
 
         for step in range(200):
@@ -502,6 +503,7 @@ class LatentOptimizer(torch.nn.Module):
 
         #loss_fcn = nn.MSELoss()
         loss_fcn = lpips.LPIPS(net='vgg')
+        loss_fcn.cuda()
         mse_min = np.inf
         num_steps = 300
         ws = ws.detach().clone()
