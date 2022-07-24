@@ -482,6 +482,8 @@ class LatentOptimizer(torch.nn.Module):
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
             gen_img = (img * 127.5 + 128).clamp(0, 255)
 
+            print(gen_img.device)
+            print(self.targ_img.device)
             #for MSELoss
             #loss = loss_fcn(gen_img[0], self.targ_img)
             loss = loss_fcn.forward(gen_img[0], self.targ_img)
