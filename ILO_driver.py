@@ -498,6 +498,10 @@ class LatentOptimizer(torch.nn.Module):
                 mse_min = loss
                 best_w = ws
 
+        img = self.G.synthesis(best_w, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('step1.png')
+
         plt.plot(loss_tracker)
         plt.show()
 
@@ -542,6 +546,10 @@ class LatentOptimizer(torch.nn.Module):
                     best_w = to_synt[0, i].detach().clone()
                     best_img = gen_img
                 loss_tracker.append(loss.detach().cpu())
+
+            img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+            im = self.genToPng(img)
+            im.save(str(i) + '.png')
 
             plt.plot(loss_tracker)
             plt.show()
