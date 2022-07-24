@@ -512,12 +512,12 @@ class LatentOptimizer(torch.nn.Module):
 
     def layer_solver(self, ws):
 
-        #loss_fcn = nn.MSELoss()
+        loss_fcn = nn.MSELoss()
         loss_fcn1 = lpips.LPIPS(net='alex')
         loss_fcn1.cuda()
         ssim_loss = pytorch_ssim.SSIM()
         mse_min = np.inf
-        num_steps = 300
+        num_steps = 350
         ws = ws.detach().clone()
 
         for i in range(0, ws.shape[1] - 1):
@@ -538,8 +538,8 @@ class LatentOptimizer(torch.nn.Module):
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
                 # for MSELoss
-                #loss = 0.5 * loss_fcn(gen_img[0], self.targ_img)
-                loss = torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
+                loss = 0.5 * loss_fcn(gen_img[0], self.targ_img)
+                loss += torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
                 loss += 100 * - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim = 0))
 
                 optimizer.zero_grad()
