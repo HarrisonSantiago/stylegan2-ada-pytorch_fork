@@ -455,7 +455,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
     def project(self, targ_img):
-        self.targ_img = targ_img
+        self.targ_img = torch.tensor(targ_img, dtype = torch.float32, device = "cuda")
 
         step1_ws = self.project_step1()
 
