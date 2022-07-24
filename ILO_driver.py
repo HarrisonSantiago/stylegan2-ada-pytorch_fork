@@ -491,7 +491,7 @@ class LatentOptimizer(torch.nn.Module):
             #for MSELoss
             #loss = 0.5 * loss_fcn(gen_img[0], self.targ_img)
             #loss += torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
-            loss = - ssim_loss(gen_img, torch.unsqueeze(self.target_img, dim = 0))
+            loss = - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim = 0))
 
             optimizer.zero_grad()
             loss.backward()
