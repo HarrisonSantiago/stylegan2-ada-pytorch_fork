@@ -473,10 +473,10 @@ class LatentOptimizer(torch.nn.Module):
 
         w_opt = torch.tensor(w_avg, dtype=torch.float32, device="cuda", requires_grad=True)
         optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=initial_learning_rate)
-        #loss_fcn = nn.MSELoss()
+        loss_fcn = nn.MSELoss()
         #loss_fcn1 = lpips.LPIPS(net ='alex')
         #loss_fcn1.cuda()
-        ssim_loss = pytorch_ssim.SSIM()
+        #ssim_loss = pytorch_ssim.SSIM()
         mse_min = np.inf
 
         loss_tracker = []
@@ -489,9 +489,9 @@ class LatentOptimizer(torch.nn.Module):
 
 
             #for MSELoss
-            #loss = 0.5 * loss_fcn(gen_img[0], self.targ_img)
+            loss = 0.5 * loss_fcn(gen_img[0], self.targ_img)
             #loss += torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
-            loss = - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim = 0))
+            #loss = - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim = 0))
 
             optimizer.zero_grad()
             loss.backward()
@@ -513,8 +513,8 @@ class LatentOptimizer(torch.nn.Module):
     def layer_solver(self, ws):
 
         #loss_fcn = nn.MSELoss()
-        #loss_fcn1 = lpips.LPIPS(net='alex')
-        #loss_fcn1.cuda()
+        loss_fcn1 = lpips.LPIPS(net='alex')
+        loss_fcn1.cuda()
         ssim_loss = pytorch_ssim.SSIM()
         mse_min = np.inf
         num_steps = 300
@@ -539,8 +539,8 @@ class LatentOptimizer(torch.nn.Module):
 
                 # for MSELoss
                 #loss = 0.5 * loss_fcn(gen_img[0], self.targ_img)
-                #loss += torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
-                loss = - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim = 0))
+                loss = torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
+                loss += 100 * - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim = 0))
 
                 optimizer.zero_grad()
                 loss.backward()
