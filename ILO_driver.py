@@ -458,6 +458,7 @@ class LatentOptimizer(torch.nn.Module):
 
         step1_ws = self.project_step1()
 
+        best_w, best_img = self.layer_solver(step1_ws)
 
         return best_w, best_img
 
@@ -533,5 +534,5 @@ class LatentOptimizer(torch.nn.Module):
         im = self.genToPng(img)
         im.save('best_proj.png')
 
-        return best_img
+        return ws, best_img
 
