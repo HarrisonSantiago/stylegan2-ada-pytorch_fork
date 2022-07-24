@@ -453,21 +453,85 @@ class LatentOptimizer(torch.nn.Module):
 
 
 
-    #def inner(self, targ_w, block_res, block_ws, target_res):
-#
-    #    x = img = None
-    #    for res, cur_ws in zip(block_res, block_ws):
-    #        #print('target_res: ', target_res)
-    #        #print('cur res: ', res)
-    #        if res == target_res:
-    #            block = getattr(self.G.synthesis, f'b{res}')
-    #            x, img = block(x, img, targ_w, {})
-    #        else:
-    #            block = getattr(self.G.synthesis, f'b{res}')
-    #            x, img = block(x, img, cur_ws, {})
-#
-#
-    #    return img
-#
+    def project(self, targ_img):
+        self.targ_img = targ_img
 
+        step1_ws = self.project_step1()
+
+
+        return best_w, best_img
+
+
+    def project_step1(self, w_avg_samples = 10000, initial_learning_rate = .05):
+        z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
+        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
+        w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
+        w_avg = np.mean(w_samples, axis=0, keepdims=True)
+
+        w_opt = torch.tensor(w_avg, dtype=torch.float32, device="cuda", requires_grad=True)
+        optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=initial_learning_rate)
+        loss_fcn = nn.MSELoss()
+
+        mse_min = np.inf
+
+        for step in range(200):
+            ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
+
+            img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+            gen_img = (img * 127.5 + 128).clamp(0, 255)
+
+            loss = loss_fcn(gen_img[0], self.targ_img)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            if loss < mse_min:
+                mse_min = loss
+                best_w = ws
+
+        return best_w
+
+    def layer_solver(self, ws):
+
+        loss_fcn = nn.MSELoss()
+        mse_min = np.inf
+        num_steps = 300
+        ws = ws.detach().clone()
+
+        for i in range(1, ws.shape[1] - 1):
+
+            w_opt = torch.tensor(ws[0, i], dtype=torch.float32, device="cuda", requires_grad=True)
+
+            optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
+
+            beg = torch.unsqueeze(ws[0, :i], dim=0)
+            end = torch.unsqueeze(ws[0, i + 1:], dim=0)
+
+            for step in range(num_steps):
+                mid = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
+                to_synt = torch.cat((beg, mid, end), dim=1)
+
+                gen_img = self.G.synthesis(to_synt, noise_mode='const')
+                gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
+
+                loss = loss_fcn(gen_img[0], self.targ_img)
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                if loss < mse_min:
+                    mse_min = loss
+                    best_w = to_synt[0, i].detach().clone()
+                    best_img = gen_img
+
+
+            ws[0, i] = best_w
+
+        img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('best_proj.png')
+
+        return best_img
 
