@@ -472,10 +472,12 @@ class LatentOptimizer(torch.nn.Module):
 
         w_opt = torch.tensor(w_avg, dtype=torch.float32, device="cuda", requires_grad=True)
         optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=initial_learning_rate)
-        #loss_fcn = nn.MSELoss()
-        loss_fcn = lpips.LPIPS(net ='vgg')
-        loss_fcn.cuda()
+        loss_fcn = nn.MSELoss()
+        #loss_fcn = lpips.LPIPS(net ='vgg')
+        #loss_fcn.cuda()
         mse_min = np.inf
+
+        loss_tracker = []
 
         for step in range(200):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
@@ -486,29 +488,33 @@ class LatentOptimizer(torch.nn.Module):
             print(gen_img.device)
             print(self.targ_img.device)
             #for MSELoss
-            #loss = loss_fcn(gen_img[0], self.targ_img)
-            loss = loss_fcn.forward(gen_img[0], self.targ_img)
+            loss = loss_fcn(gen_img[0], self.targ_img)
+            #loss = loss_fcn.forward(gen_img[0], self.targ_img)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
-
+            loss_tracker.append(loss.detach().cpu())
             if loss < mse_min:
                 mse_min = loss
                 best_w = ws
+
+        plt.plot(loss_tracker)
+        plt.show()
 
         return best_w
 
     def layer_solver(self, ws):
 
-        #loss_fcn = nn.MSELoss()
-        loss_fcn = lpips.LPIPS(net='vgg')
-        loss_fcn.cuda()
+        loss_fcn = nn.MSELoss()
+        #loss_fcn = lpips.LPIPS(net='vgg')
+        #loss_fcn.cuda()
         mse_min = np.inf
         num_steps = 300
         ws = ws.detach().clone()
 
         for i in range(0, ws.shape[1] - 1):
+            loss_tracker = []
 
             w_opt = torch.tensor(ws[0, i], dtype=torch.float32, device="cuda", requires_grad=True)
 
@@ -525,8 +531,8 @@ class LatentOptimizer(torch.nn.Module):
                 gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
 
                 # for MSELoss
-                # loss = loss_fcn(gen_img[0], self.targ_img)
-                loss = loss_fcn.forward(gen_img[0], self.targ_img)
+                loss = loss_fcn(gen_img[0], self.targ_img)
+                #loss = loss_fcn.forward(gen_img[0], self.targ_img)
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -536,8 +542,10 @@ class LatentOptimizer(torch.nn.Module):
                     mse_min = loss
                     best_w = to_synt[0, i].detach().clone()
                     best_img = gen_img
+                loss_tracker.append(loss.detach().cpu())
 
-
+            plt.plot(loss_tracker)
+            plt.show()
             ws[0, i] = best_w
 
         img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
