@@ -520,7 +520,7 @@ class LatentOptimizer(torch.nn.Module):
         num_steps = 350
         ws = ws.detach().clone()
 
-        for i in range(0, ws.shape[1] - 1):
+        for i in range(0, ws.shape[1]):
             loss_tracker = []
 
             w_opt = torch.tensor(ws[0, i], dtype=torch.float32, device="cuda", requires_grad=True)
