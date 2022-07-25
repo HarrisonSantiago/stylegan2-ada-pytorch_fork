@@ -2,8 +2,6 @@ function init(home_dir, im_width)
     disp("---Installing ISETImagePipeline for this engine---")
     tbUseProject('ISETImagePipeline');
 
-    save(home_dir + "/retina.mat", "retina")
-
 
     name = strcat(home_dir, "/retina",im_width,".mat");
     if exist(name, 'file')
