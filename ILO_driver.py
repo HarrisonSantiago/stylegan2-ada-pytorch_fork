@@ -582,13 +582,15 @@ class LatentOptimizer(torch.nn.Module):
         targ_img = transform(image).cuda().float()
         targ_img = targ_img.permute((1, 2, 0))
         targ_img = torch.unsqueeze(torch.flatten(targ_img),1)
-        coneExc = torch.matmul(self.render, targ_img)
-        targ_img = torch.matmul(self.coneInv , coneExc)
-        targ_img = torch.reshape(targ_img, (3, 32, 32)) #sideways
-        targ_img = torch.transpose(torch.reshape(targ_img, (3,32,32)), 1,2)
 
-        save_image(targ_img, 'target.png')
-        best_w = self.useInv_step1(targ_img)
+        coneExc = torch.matmul(self.render, targ_img)
+        targ_rec = torch.matmul(self.coneInv , coneExc)
+
+        targ_rec = torch.reshape(targ_rec, (32, 32, 3)) #sideways
+        targ_rec = targ_rec.permute((2,0,1))
+
+        save_image(targ_rec, 'target.png')
+        best_w = self.useInv_step1(targ_rec)
 
         a, b = self.layer_useInv(best_w, targ_img)
 
@@ -617,10 +619,13 @@ class LatentOptimizer(torch.nn.Module):
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
             gen_png = self.genToPng(img)
             gen_png.save('current_guess.png')
-            flat_img = torch.flatten(torch.squeeze(img).permute((1,2,0)))
+            img = torch.squeeze(img).permute((1,2,0)) # W, H , C
+            flat_img = torch.flatten(img)
+
             gen_exc = torch.matmul(self.render, flat_img)
             rec_gen_img = torch.matmul(self.coneInv, gen_exc)
             rec_gen_img = torch.transpose(torch.reshape(rec_gen_img, (3,32,32)), 1,2)
+
             # for MSELoss
             loss = loss_fcn(rec_gen_img, targ_img)
             # loss += torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
