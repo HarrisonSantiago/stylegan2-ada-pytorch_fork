@@ -610,9 +610,9 @@ class LatentOptimizer(torch.nn.Module):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
-            gen_img = self.genToPng(img)
-            gen_img.save('current_guess.png')
-            flat_img = torch.flatten(gen_img.permute(1,2,0))
+            gen_png = self.genToPng(img)
+            gen_png.save('current_guess.png')
+            flat_img = torch.flatten(img.permute(1,2,0))
             gen_exc = torch.matmul(self.render, flat_img)
             rec_gen_img = torch.matmul(self.coneInv, gen_exc)
             rec_gen_img = torch.transpose(torch.reshape(rec_gen_img, (3,32,32)), 1,2)
