@@ -573,7 +573,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
         coneExc = torch.tensor(np.asarray(self.engine.getConeResp(targ_path, self.retinaPath)),
-                                   dtype=torch.float32, device = "cuda", requires_grad = True)
+                                   dtype=torch.float32, device = "cuda")
         targ_img = self.coneInv * coneExc
         best_w = self.useInv_step1(targ_img)
 
