@@ -14,6 +14,7 @@ function init(home_dir, im_width)
         save(name, "retina");
 
         disp('---Saving render mat ---')
+        imageSize = [32,32,3] %TODO: make able to modify
         render = retina.forwardRender(imageSize);
         render = double(render);
         name = strcat(home_dir, "/render",im_width,".mat");
