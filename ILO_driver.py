@@ -21,6 +21,7 @@ from utils import *
 import copy
 import matlab.engine
 import lpips
+import scipy
 
 
 
@@ -66,7 +67,7 @@ class LatentOptimizer(torch.nn.Module):
         self.engine.cd(self.home_dir)
         self.retinaPath = self.home_dir+ "/retina"+im_width+".mat"
         self.coneInvPath = self.home_dir+ "/render_pinv"+im_width+".mat"
-        self.coneInv = 0
+        self.coneInv = scipy.io.loadmat(self.coneInvPath)
 
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
