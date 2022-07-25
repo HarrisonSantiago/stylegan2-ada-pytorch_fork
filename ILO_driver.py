@@ -602,7 +602,7 @@ class LatentOptimizer(torch.nn.Module):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
-            gen_img = (img * 127.5 + 128).clamp(0, 255)
+            gen_img = self.genToPng(img)
             gen_img.save('current_guess.png')
             gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png', self.retinaPath)),
                                    dtype=torch.float32, device = "cuda", requires_grad = True)
@@ -653,8 +653,8 @@ class LatentOptimizer(torch.nn.Module):
                 mid = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
                 to_synt = torch.cat((beg, mid, end), dim=1)
 
-                gen_img = self.G.synthesis(to_synt, noise_mode='const')
-                gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
+                img = self.G.synthesis(to_synt, noise_mode='const')
+                gen_img = self.genToPng(img)
                 gen_img.save('current_guess.png')
                 gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png', self.retinaPath)),
                                        dtype=torch.float32, device="cuda", requires_grad=True)
