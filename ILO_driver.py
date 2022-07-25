@@ -67,7 +67,7 @@ class LatentOptimizer(torch.nn.Module):
         self.engine.cd(self.home_dir)
         self.retinaPath = self.home_dir+ "/retina"+im_width+".mat"
         self.coneInvPath = self.home_dir+ "/render_pinv"+im_width+".mat"
-        self.coneInv = sio.loadmat(self.coneInvPath)
+        self.coneInv = sio.loadmat(self.coneInvPath)['render_pinv']
 
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
