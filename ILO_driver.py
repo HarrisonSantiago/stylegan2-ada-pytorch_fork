@@ -576,11 +576,10 @@ class LatentOptimizer(torch.nn.Module):
         coneExc = torch.tensor(np.asarray(self.engine.getConeResp(targ_path, self.retinaPath)),
                                    dtype=torch.float32, device = "cuda")
         targ_img = torch.matmul(self.coneInv , coneExc)
-        print(self.coneInv.shape)
-        print(targ_img.shape)
-        #best_w = self.useInv_step1(targ_img)
 
-        #a, b = self.layer_useInv(best_w, targ_img)
+        best_w = self.useInv_step1(targ_img)
+
+        a, b = self.layer_useInv(best_w, targ_img)
 
         return 0
 
@@ -609,9 +608,8 @@ class LatentOptimizer(torch.nn.Module):
             gen_img.save('current_guess.png')
             gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png', self.retinaPath)),
                                    dtype=torch.float32, device = "cuda", requires_grad = True)
-            rec_gen_img = self.coneInv * gen_exc
-            print(rec_gen_img.shape)
-            print(targ_img.shape)
+            rec_gen_img = torch.matmul(self.coneInv, gen_exc)
+
             # for MSELoss
             loss = loss_fcn(rec_gen_img, targ_img)
             # loss += torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
@@ -662,7 +660,7 @@ class LatentOptimizer(torch.nn.Module):
                 gen_img.save('current_guess.png')
                 gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png', self.retinaPath)),
                                        dtype=torch.float32, device="cuda", requires_grad=True)
-                rec_gen_img = self.coneInv * gen_exc
+                rec_gen_img = torch.matmul(self.coneInv, gen_exc)
 
                 # for MSELoss
                 loss = loss_fcn(rec_gen_img, targ_img)
