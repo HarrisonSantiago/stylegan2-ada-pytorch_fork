@@ -578,7 +578,7 @@ class LatentOptimizer(torch.nn.Module):
                                    dtype=torch.float32, device = "cuda")
         targ_img = torch.matmul(self.coneInv , coneExc)
         #to_save = torch.reshape(targ_img, (3, 32, 32)) #sideways
-        to_save = torch.swapaxes(torch.reshape(targ_img, (3,32,32)), 1,2)
+        to_save = torch.transpose(torch.reshape(targ_img, (3,32,32)), 1,2)
 
         save_image(to_save, 'target.png')
         best_w = self.useInv_step1(targ_img)
