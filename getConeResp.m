@@ -1,12 +1,10 @@
 
-function coneResponse = getConeResp(img_path)
+function coneResponse = getConeResp(img_path, retina_path)
 
     imageRGB = imread(img_path);
     fprintf('%d ',size(imageRGB)')
-    
-    %tbUseProject('ISETImagePipeline');
 
-    load("retina.mat", "retina")
+    load(retina_path, "retina")
 
     [~, ~, imageLinear, coneResponse] = retina.compute(double(imageRGB));
 

@@ -55,16 +55,18 @@ class SphericalOptimizer():
             param.mul_(self.radii[param])
 
 class LatentOptimizer(torch.nn.Module):
-    def __init__(self, config, Generator, targ_path, device=torch.device):
+    def __init__(self, config, Generator, im_width, device=torch.device):
         super().__init__()
         self.config = config
         #---creates matlab engine---
-        #self.engine = matlab.engine.start_matlab()
+        self.engine = matlab.engine.start_matlab()
 
-        #self.home_dir = self.engine.pwd()
-        #self.engine.init(self.home_dir, nargout = 0) #loads ISETBio stuff and creates the retina object
-        #self.engine.cd(self.home_dir)
-
+        self.home_dir = self.engine.pwd()
+        self.engine.init(self.home_dir, im_width, nargout = 0) #loads ISETBio stuff and creates the retina object
+        self.engine.cd(self.home_dir)
+        self.retinaPath = self.home_dir+ "/retina"+im_width+".mat"
+        self.coneInvPath = self.home_dir+ "/render_pinv"+im_width+".mat"
+        self.coneInv = 0
 
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
@@ -286,7 +288,7 @@ class LatentOptimizer(torch.nn.Module):
     def step1(self, targ_path, num_steps = 100, initial_learning_rate = 0.1, w_avg_samples = 10000 ):
         print('--- step 1 ---')
 
-        self.targ_exc = torch.tensor(np.asarray(self.engine.getConeResp(targ_path)),
+        self.targ_exc = torch.tensor(np.asarray(self.engine.getConeResp(targ_path, self.retinaPath)),
                                      dtype=torch.float32, device="cuda")
 
         loss_tracker = []
@@ -317,7 +319,7 @@ class LatentOptimizer(torch.nn.Module):
             im = self.genToPng(img)
             im.save('current_guess.png')
 
-            gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png')),
+            gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png', self.retinaPath)),
                                    dtype=torch.float32, device = "cuda", requires_grad = True)
 
             #print('shape: ', gen_exc.shape)
@@ -419,7 +421,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
                 #current
-                gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('curr_guess.png')),
+                gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('curr_guess.png', self.retinaPath)),
                                        dtype=torch.float32, device="cuda", requires_grad=True)
                 loss = loss_fcn(gen_exc, self.targ_exc)
 
@@ -563,6 +565,129 @@ class LatentOptimizer(torch.nn.Module):
         img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
         im = self.genToPng(img)
         im.save('best_proj.png')
+
+        return ws, best_img
+
+
+    def recon_useInv(self, targ_path):
+
+
+        coneExc = torch.tensor(np.asarray(self.engine.getConeResp(targ_path, self.retinaPath)),
+                                   dtype=torch.float32, device = "cuda", requires_grad = True)
+        targ_img = self.coneInv * coneExc
+        best_w = self.useInv_step1(targ_img)
+
+        a, b = self.layer_useInv(best_w, targ_img)
+
+        return 0
+
+    def useInv_step1(self, targ_img, w_avg_samples = 10000, initial_learning_rate = 0.05):
+
+        z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
+        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
+        w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
+        w_avg = np.mean(w_samples, axis=0, keepdims=True)
+
+        w_opt = torch.tensor(w_avg, dtype=torch.float32, device="cuda", requires_grad=True)
+        optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=initial_learning_rate)
+        loss_fcn = nn.MSELoss()
+        # loss_fcn1 = lpips.LPIPS(net ='alex')
+        # loss_fcn1.cuda()
+        # ssim_loss = pytorch_ssim.SSIM()
+        mse_min = np.inf
+
+        loss_tracker = []
+
+        for step in range(200):
+            ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
+
+            img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+            gen_img = (img * 127.5 + 128).clamp(0, 255)
+            gen_img.save('current_guess.png')
+            gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png', self.retinaPath)),
+                                   dtype=torch.float32, device = "cuda", requires_grad = True)
+            rec_gen_img = self.coneInv * gen_exc
+
+            # for MSELoss
+            loss = loss_fcn(rec_gen_img, targ_img)
+            # loss += torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
+            # loss = - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim = 0))
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            loss_tracker.append(loss.detach().cpu())
+            if loss < mse_min:
+                mse_min = loss
+                best_w = ws
+
+        img = self.G.synthesis(best_w, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('step1_inv.png')
+
+        plt.plot(loss_tracker)
+        plt.show()
+
+        return best_w
+
+    def layer_useInv(self, ws, targ_img):
+        loss_fcn = nn.MSELoss()
+        #loss_fcn1 = lpips.LPIPS(net='alex')
+        #loss_fcn1.cuda()
+        #ssim_loss = pytorch_ssim.SSIM()
+        mse_min = np.inf
+        num_steps = 350
+        ws = ws.detach().clone()
+
+        for i in range(0, ws.shape[1]):
+            loss_tracker = []
+
+            w_opt = torch.tensor(ws[0, i], dtype=torch.float32, device="cuda", requires_grad=True)
+
+            optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
+
+            beg = torch.unsqueeze(ws[0, :i], dim=0)
+            end = torch.unsqueeze(ws[0, i + 1:], dim=0)
+
+            for step in range(num_steps):
+                mid = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
+                to_synt = torch.cat((beg, mid, end), dim=1)
+
+                gen_img = self.G.synthesis(to_synt, noise_mode='const')
+                gen_img = (gen_img * 127.5 + 128).clamp(0, 255)
+                gen_img.save('current_guess.png')
+                gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png', self.retinaPath)),
+                                       dtype=torch.float32, device="cuda", requires_grad=True)
+                rec_gen_img = self.coneInv * gen_exc
+
+                # for MSELoss
+                loss = loss_fcn(rec_gen_img, targ_img)
+                #loss += 1.2 * torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
+                #loss += 80 * - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim=0))
+
+                if loss < mse_min:
+                    mse_min = loss
+                    best_w = to_synt[0, i].detach().clone()
+                    best_img = gen_img
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+
+                loss_tracker.append(loss.detach().cpu())
+
+            img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+            im = self.genToPng(img)
+            im.save(str(i) + '.png')
+
+            plt.plot(loss_tracker)
+            plt.show()
+            ws[0, i] = best_w
+
+        img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('best_proj_inv.png')
 
         return ws, best_img
 
