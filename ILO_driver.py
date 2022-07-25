@@ -2,6 +2,7 @@ import os.path
 import pytorch_ssim
 
 import torchvision
+from torchvision.utils import save_image
 import numpy as np
 import math
 import torch
@@ -576,7 +577,8 @@ class LatentOptimizer(torch.nn.Module):
         coneExc = torch.tensor(np.asarray(self.engine.getConeResp(targ_path, self.retinaPath)),
                                    dtype=torch.float32, device = "cuda")
         targ_img = torch.matmul(self.coneInv , coneExc)
-
+        to_save = torch.reshape(targ_img, (3, 32, 32))
+        save_image(to_save, 'target.png')
         best_w = self.useInv_step1(targ_img)
 
         a, b = self.layer_useInv(best_w, targ_img)
