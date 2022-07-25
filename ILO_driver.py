@@ -68,8 +68,10 @@ class LatentOptimizer(torch.nn.Module):
         self.engine.cd(self.home_dir)
         self.retinaPath = self.home_dir+ "/retina"+im_width+".mat"
         self.coneInvPath = self.home_dir+ "/render_pinv"+im_width+".mat"
+        self.renderPath = self.home_dir+ "/render"+im_width+".mat"
         self.coneInv = torch.tensor(sio.loadmat(self.coneInvPath)['render_pinv'], dtype = torch.float32, device = "cuda")
-
+        self.render = torch.tensor(sio.loadmat(self.renderPath)['render'], dtype = torch.float32, device = "cuda")
+        print(self.render.shape)
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
 
