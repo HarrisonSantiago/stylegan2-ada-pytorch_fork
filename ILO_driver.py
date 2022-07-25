@@ -605,7 +605,7 @@ class LatentOptimizer(torch.nn.Module):
             gen_img = self.genToPng(img)
             gen_img.save('current_guess.png')
             gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png', self.retinaPath)),
-                                   dtype=torch.float32, device = "cuda")
+                                   dtype=torch.float32, device = "cuda", requires_grad = True)
             rec_gen_img = self.coneInv * gen_exc
 
             # for MSELoss
