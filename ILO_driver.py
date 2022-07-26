@@ -794,7 +794,8 @@ class LatentOptimizer(torch.nn.Module):
             # img = linear + c
             # c = img - linear
             # img - c = linear
-
+            print(img.shape)
+            print(linear_image.shape)
             c = img.detach().clone() - linear_image.detach().clone()
             img -= c
 
