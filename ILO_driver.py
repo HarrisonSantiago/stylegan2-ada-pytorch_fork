@@ -575,21 +575,25 @@ class LatentOptimizer(torch.nn.Module):
 
     def recon_useInv(self, targ_path):
 
-        image = Image.open(targ_path).convert('RGB')
-        transform = transforms.Compose([
-            transforms.PILToTensor()
-        ])
-        targ_img = transform(image).cuda().float()
-        targ_img = targ_img.permute((1, 2, 0))
-        targ_img = torch.unsqueeze(torch.flatten(targ_img),1)
 
-        coneExc = torch.matmul(self.render, targ_img)
+        linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(targ_path, self.retinaPath)),
+                                     dtype=torch.float32, device="cuda")
+
+
+
+        coneExc = torch.matmul(self.render, linear_image.permute(0,2,1))
         targ_rec = torch.matmul(self.coneInv , coneExc)
 
-        targ_rec = torch.reshape(targ_rec, (32, 32, 3)) #sideways
-        targ_rec = targ_rec.permute((2,0,1))
+        targ1 = torch.reshape(targ_rec, (32, 32, 3)) #sideways
+        save_image(targ1, 'target1.png')
 
-        save_image(targ_rec, 'target.png')
+        targ2 = targ_rec.permute((2,0,1))
+        save_image(targ2, 'target2.png')
+
+        targ3 = targ_rec.permute((2, 1, 0))
+        save_image(targ3, 'target3.png')
+
+
         best_w = self.useInv_step1(targ_rec)
 
         a, b = self.layer_useInv(best_w, targ_img)
