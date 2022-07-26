@@ -756,7 +756,7 @@ class LatentOptimizer(torch.nn.Module):
 
         best_w = self.useCone_step1(coneExc)
 
-        #a, b = self.layer_useCone(best_w, targ_rec)
+        a, b = self.layer_useCone(best_w, targ_rec)
         return 0
 
     def useCone_step1(self, targ_coneExc, w_avg_samples = 10000, initial_learning_rate = 0.05):
@@ -825,3 +825,80 @@ class LatentOptimizer(torch.nn.Module):
         plt.show()
 
         return best_w
+
+    def layer_useCone(self, ws, targ_coneExc):
+        loss_fcn = nn.MSELoss()
+        #loss_fcn1 = lpips.LPIPS(net='alex')
+        #loss_fcn1.cuda()
+        #ssim_loss = pytorch_ssim.SSIM()
+        mse_min = np.inf
+        num_steps = 50
+        ws = ws.detach().clone()
+
+        for i in range(0, ws.shape[1]):
+            loss_tracker = []
+
+            w_opt = torch.tensor(ws[0, i], dtype=torch.float32, device="cuda", requires_grad=True)
+
+            optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
+
+            beg = torch.unsqueeze(ws[0, :i], dim=0)
+            end = torch.unsqueeze(ws[0, i + 1:], dim=0)
+
+            for step in range(num_steps):
+                mid = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
+                to_synt = torch.cat((beg, mid, end), dim=1)
+
+                img = self.G.synthesis(to_synt, noise_mode='const')
+                gen_png = self.genToPng(img)
+                path = 'current_guess.png'
+                gen_png.save(path)
+                # ---start---
+                linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
+                                            dtype=torch.float32, device="cuda")
+
+                # here linear_image is the adjustment we need to make
+                img = torch.squeeze(img)
+                img = img.permute((1, 2, 0))
+                # want to adjust img to gen_rec without loosing the comp map
+                # img = linear + c
+                # c = img - linear
+                # img - c = linear
+                print(img.shape)
+                print(linear_image.shape)
+                c = img.detach().clone() - linear_image.detach().clone()
+                img -= c
+
+                flat = torch.flatten(img)
+                gen_coneExc = torch.matmul(self.render, flat)
+
+                # for MSELoss
+                loss = loss_fcn(gen_coneExc, targ_coneExc)
+                #loss += 1.2 * torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
+                #loss += 80 * - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim=0))
+
+                if loss < mse_min:
+                    mse_min = loss
+                    best_w = to_synt[0, i].detach().clone()
+                    best_img = img
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+
+                loss_tracker.append(loss.detach().cpu())
+
+            img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+            im = self.genToPng(img)
+            im.save(str(i) + '.png')
+
+            plt.plot(loss_tracker)
+            plt.show()
+            ws[0, i] = best_w
+
+        img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('best_proj_cone.png')
+
+        return ws, best_img
