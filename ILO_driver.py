@@ -686,21 +686,38 @@ class LatentOptimizer(torch.nn.Module):
                 to_synt = torch.cat((beg, mid, end), dim=1)
 
                 img = self.G.synthesis(to_synt, noise_mode='const')
-                gen_img = self.genToPng(img)
-                gen_img.save('current_guess.png')
-                gen_exc = torch.tensor(np.asarray(self.engine.getConeResp('current_guess.png', self.retinaPath)),
-                                       dtype=torch.float32, device="cuda", requires_grad=True)
-                rec_gen_img = torch.matmul(self.coneInv, gen_exc)
+                gen_png = self.genToPng(img)
+                path = 'current_guess.png'
+                gen_png.save(path)
+                # ---start---
+                linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
+                                            dtype=torch.float32, device="cuda")
+                flat = torch.flatten(linear_image)
+                coneExc = torch.matmul(self.render, flat)
+                gen_rec = torch.matmul(self.coneInv, coneExc)
+                gen_rec = torch.reshape(gen_rec, (32, 32, 3))
+                gen_rec = gen_rec.permute((2, 0, 1))
+                # ---reconstruction---
+
+                img = torch.squeeze(img)
+                # want to adjust img to gen_rec without loosing the comp map
+                # img = gen_rec + c
+                # gen_rec + c = img
+                # c = img - gen_rec
+                # img - c = gen_re
+
+                c = img.detach().clone() - gen_rec.detach().clone()
+                img -= c
 
                 # for MSELoss
-                loss = loss_fcn(rec_gen_img, targ_img)
+                loss = loss_fcn(img, targ_img)
                 #loss += 1.2 * torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
                 #loss += 80 * - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim=0))
 
                 if loss < mse_min:
                     mse_min = loss
                     best_w = to_synt[0, i].detach().clone()
-                    best_img = gen_img
+                    best_img = img
 
                 optimizer.zero_grad()
                 loss.backward()
