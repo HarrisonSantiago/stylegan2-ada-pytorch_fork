@@ -740,3 +740,90 @@ class LatentOptimizer(torch.nn.Module):
 
         return ws, best_img
 
+    def recon_useCone(self, targ_path):
+        # ---start---
+
+        linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(targ_path, self.retinaPath)),
+                                    dtype=torch.float32, device="cuda")
+        flat = torch.flatten(linear_image)
+        coneExc = torch.matmul(self.render, flat)
+        targ_rec = torch.matmul(self.coneInv, coneExc)
+        targ_rec = torch.reshape(targ_rec, (32, 32, 3))
+        targ_rec = targ_rec.permute((2, 0, 1))
+        # ---reconstruction---
+
+        save_image(targ_rec, 'target_useCone.png')
+
+        best_w = self.useCone_step1(coneExc)
+
+        #a, b = self.layer_useCone(best_w, targ_rec)
+        return 0
+
+    def useCone_step1(self, targ_coneExc, w_avg_samples = 10000, initial_learning_rate = 0.05):
+
+        z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
+        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
+        w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
+        w_avg = np.mean(w_samples, axis=0, keepdims=True)
+
+        w_opt = torch.tensor(w_avg, dtype=torch.float32, device="cuda", requires_grad=True)
+        optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=initial_learning_rate)
+        loss_fcn = nn.MSELoss()
+        # loss_fcn1 = lpips.LPIPS(net ='alex')
+        # loss_fcn1.cuda()
+        # ssim_loss = pytorch_ssim.SSIM()
+        mse_min = np.inf
+
+        loss_tracker = []
+
+        for step in range(50):
+            ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
+
+            img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+
+            gen_png = self.genToPng(img)
+            path = 'current_guess.png'
+            gen_png.save(path)
+            # ---start---
+            linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
+                                        dtype=torch.float32, device="cuda")
+
+            #here linear_image is the adjustment we need to make
+            img = torch.squeeze(img)
+            # want to adjust img to gen_rec without loosing the comp map
+            # img = linear + c
+            # c = img - linear
+            # img - c = linear
+
+            c = img.detach().clone() - linear_image.detach().clone()
+            img -= c
+
+            flat = torch.flatten(img)
+            gen_coneExc = torch.matmul(self.render, flat)
+
+
+
+
+
+
+            # for MSELoss
+            loss = loss_fcn(gen_coneExc, targ_coneExc)
+            # loss += torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
+            # loss = - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim = 0))
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            loss_tracker.append(loss.detach().cpu())
+            if loss < mse_min:
+                mse_min = loss
+                best_w = ws
+
+        img = self.G.synthesis(best_w, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('step1_cone.png')
+
+        plt.plot(loss_tracker)
+        plt.show()
+
+        return best_w
