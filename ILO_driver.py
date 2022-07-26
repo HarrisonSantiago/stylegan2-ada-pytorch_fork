@@ -580,7 +580,7 @@ class LatentOptimizer(torch.nn.Module):
                                      dtype=torch.float32, device="cuda")
 
 
-        flat = torch.flatten(linear_image.permute(0,2,1))
+        flat = torch.flatten(linear_image)#.permute(0,2,1))
         print(flat.shape)
         coneExc = torch.matmul(self.render, flat)
         targ_rec = torch.matmul(self.coneInv, coneExc)
