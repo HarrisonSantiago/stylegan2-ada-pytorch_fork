@@ -832,7 +832,7 @@ class LatentOptimizer(torch.nn.Module):
         #loss_fcn1.cuda()
         #ssim_loss = pytorch_ssim.SSIM()
         mse_min = np.inf
-        num_steps = 50
+        num_steps = 80
         ws = ws.detach().clone()
 
         for i in range(0, ws.shape[1]):
