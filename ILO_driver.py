@@ -589,7 +589,7 @@ class LatentOptimizer(torch.nn.Module):
 
         best_w = self.useInv_step1(targ_rec)
 
-        a, b = self.layer_useInv(best_w, targ_img)
+        a, b = self.layer_useInv(best_w, targ_rec)
 
         return 0
 
