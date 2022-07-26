@@ -790,6 +790,7 @@ class LatentOptimizer(torch.nn.Module):
 
             #here linear_image is the adjustment we need to make
             img = torch.squeeze(img)
+            img = img.permute((1,2,0))
             # want to adjust img to gen_rec without loosing the comp map
             # img = linear + c
             # c = img - linear
@@ -801,10 +802,6 @@ class LatentOptimizer(torch.nn.Module):
 
             flat = torch.flatten(img)
             gen_coneExc = torch.matmul(self.render, flat)
-
-
-
-
 
 
             # for MSELoss
