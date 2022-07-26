@@ -581,7 +581,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
 
-        coneExc = torch.matmul(self.render, linear_image.permute(0,2,1))
+        coneExc = torch.matmul(self.render, torch.flatten(linear_image.permute(0,2,1)))
         targ_rec = torch.matmul(self.coneInv , coneExc)
 
         targ1 = torch.reshape(targ_rec, (32, 32, 3)) #sideways
