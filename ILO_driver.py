@@ -580,12 +580,13 @@ class LatentOptimizer(torch.nn.Module):
                                      dtype=torch.float32, device="cuda")
 
 
-
-        coneExc = torch.matmul(self.render, torch.flatten(linear_image.permute(0,2,1)))
-        targ_rec = torch.matmul(self.coneInv , coneExc)
-
-        targ1 = torch.reshape(targ_rec, (32, 32, 3)) #sideways
-        save_image(targ1, 'target1.png')
+        flat = torch.flatten(linear_image.permute(0,2,1))
+        print(flat.shape)
+        coneExc = torch.matmul(self.render, flat)
+        targ_rec = torch.matmul(self.coneInv, coneExc)
+        print(targ_rec.shape)
+        targ_rec = torch.reshape(targ_rec, (32, 32, 3))
+        print(targ_rec.shape)
 
         targ2 = targ_rec.permute((2,0,1))
         save_image(targ2, 'target2.png')
