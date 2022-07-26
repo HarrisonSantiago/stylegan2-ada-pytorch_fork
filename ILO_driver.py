@@ -575,25 +575,17 @@ class LatentOptimizer(torch.nn.Module):
 
     def recon_useInv(self, targ_path):
 
-
+        #---start---
         linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(targ_path, self.retinaPath)),
                                      dtype=torch.float32, device="cuda")
-
-
-        flat = torch.flatten(linear_image)#.permute(0,2,1))
-        print(flat.shape)
+        flat = torch.flatten(linear_image)
         coneExc = torch.matmul(self.render, flat)
         targ_rec = torch.matmul(self.coneInv, coneExc)
-        print(targ_rec.shape)
         targ_rec = torch.reshape(targ_rec, (32, 32, 3))
-        print(targ_rec.shape)
+        targ_rec = targ_rec.permute((2,0,1))
+        #---reconstruction---
 
-        targ2 = targ_rec.permute((2,0,1))
-        save_image(targ2, 'target2.png')
-
-        targ3 = targ_rec.permute((2, 1, 0))
-        save_image(targ3, 'target3.png')
-
+        save_image(targ_rec, 'target.png')
 
         best_w = self.useInv_step1(targ_rec)
 
@@ -622,17 +614,34 @@ class LatentOptimizer(torch.nn.Module):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
-            gen_png = self.genToPng(img)
-            gen_png.save('current_guess.png')
-            img = torch.squeeze(img).permute((1,2,0)) # W, H , C
-            flat_img = torch.flatten(img)
 
-            gen_exc = torch.matmul(self.render, flat_img)
-            rec_gen_img = torch.matmul(self.coneInv, gen_exc)
-            rec_gen_img = torch.transpose(torch.reshape(rec_gen_img, (3,32,32)), 1,2)
+            gen_png = self.genToPng(img)
+            path = 'current_guess.png'
+            gen_png.save(path)
+            # ---start---
+            linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
+                                        dtype=torch.float32, device="cuda")
+            flat = torch.flatten(linear_image)
+            coneExc = torch.matmul(self.render, flat)
+            gen_rec = torch.matmul(self.coneInv, coneExc)
+            gen_rec = torch.reshape(gen_rec, (32, 32, 3))
+            gen_rec = gen_rec.permute((2, 0, 1))
+            # ---reconstruction---
+
+            img = torch.squeeze(img)
+            #want to adjust img to gen_rec without loosing the comp map
+            # img = gen_rec + c
+            #gen_rec + c = img
+            # c = img - gen_rec
+            # img - c = gen_re
+
+            c = img.detach().clone() - gen_rec.detach().clone()
+            img -= c
+
+
 
             # for MSELoss
-            loss = loss_fcn(rec_gen_img, targ_img)
+            loss = loss_fcn(img, targ_img)
             # loss += torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
             # loss = - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim = 0))
 
