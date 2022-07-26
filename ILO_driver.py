@@ -776,7 +776,7 @@ class LatentOptimizer(torch.nn.Module):
 
         loss_tracker = []
 
-        for step in range(50):
+        for step in range(10):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
@@ -832,7 +832,7 @@ class LatentOptimizer(torch.nn.Module):
         #loss_fcn1.cuda()
         #ssim_loss = pytorch_ssim.SSIM()
         mse_min = np.inf
-        num_steps = 80
+        num_steps = 200
         ws = ws.detach().clone()
 
         for i in range(0, ws.shape[1]):
