@@ -846,7 +846,7 @@ class LatentOptimizer(torch.nn.Module):
             loss_tracker.append(loss.detach().cpu())
             if loss < mse_min:
 
-                self.engine.getVisuals(self.retinaPath, path)
+                self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + path, nargout = 0)
                 visuals.append(Image.open(self.visualPath).convert('RGB'))
                 imgs.append(gen_png)
                 mse_min = loss
