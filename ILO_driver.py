@@ -1,6 +1,6 @@
 import os.path
 import pytorch_ssim
-
+from mp4_gen import *
 import torchvision
 from torchvision.utils import save_image
 import numpy as np
@@ -71,7 +71,7 @@ class LatentOptimizer(torch.nn.Module):
         self.renderPath = self.home_dir+ "/render"+im_width+".mat"
         self.coneInv = torch.tensor(sio.loadmat(self.coneInvPath)['render_pinv'], dtype = torch.float32, device = "cuda")
         self.render = torch.tensor(sio.loadmat(self.renderPath)['render'], dtype = torch.float32, device = "cuda")
-        print(self.render.shape)
+        self.visualPath = "for_mp4.png"
         self.G = copy.deepcopy(Generator).eval().requires_grad_(False).to(device)
 
 
@@ -740,27 +740,57 @@ class LatentOptimizer(torch.nn.Module):
 
         return ws, best_img
 
-    def recon_useCone(self, targ_path):
+    def recon_useCone(self, targ_path, saveVideo = True):
         # ---start---
 
+        #mp4 stuff
+        og_image = Image.open(targ_path).convert('RGB')
+        #w, h = og_image.size
+        #s = min(w, h)
+        #target_pil = og_image.crop(((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2))
+        #target_pil = target_pil.resize((self.G.img_resolution, self.G.img_resolution), Image.LANCZOS)
+        #target_uint8 = np.array(target_pil, dtype=np.uint8)
+        #ending getting target image for mp4
+        self.engine.getVisuals(self.retinaPath, targ_path)
+        og_visual = Image.open(self.visualPath).convert('RGB')
+
+        top = get_concat_h_multi_blank([og_image, og_visual])
+        top.save('combo.png')
         linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(targ_path, self.retinaPath)),
                                     dtype=torch.float32, device="cuda")
         flat = torch.flatten(linear_image)
         coneExc = torch.matmul(self.render, flat)
-        targ_rec = torch.matmul(self.coneInv, coneExc)
-        targ_rec = torch.reshape(targ_rec, (32, 32, 3))
-        targ_rec = targ_rec.permute((2, 0, 1))
+
+
+        #targ_rec = torch.matmul(self.coneInv, coneExc)
+        #targ_rec = torch.reshape(targ_rec, (32, 32, 3))
+        #targ_rec = targ_rec.permute((2, 0, 1))
+        #save_image(targ_rec, 'target_useCone.png')
+
         # ---reconstruction---
+        #best_w, imgs, visuals = self.useCone_step1(coneExc)
+#
+        #ws, imgs1, visuals1 = self.layer_useCone(best_w, coneExc)
+#
+        #bottoms = []
+        #for img, visual in zip(imgs, visuals):
+        #    bottoms.append(get_concat_h_multi_blank([img, visual]))
+        #for img, visual in zip(imgs1, visuals1):
+        #    bottoms.append(get_concat_h_multi_blank([img, visual]))
+#
+#
+        #if saveVideo:
+        #    video = imageio.get_writer('proj.mp4', mode='I', fps=10, codec='libx264', bitrate='16M')
+        #    print(f'Saving optimization progress video "{outdir}/proj.mp4"')
+        #    for img in bottoms:
+        #        video.append_data(np.concatenate([top, img], axis=2))
+        #    video.close()
 
-        save_image(targ_rec, 'target_useCone.png')
-
-        best_w = self.useCone_step1(coneExc)
-
-        ws, best_img = self.layer_useCone(best_w, coneExc)
-
-        return ws
+        return 0
 
     def useCone_step1(self, targ_coneExc, w_avg_samples = 10000, initial_learning_rate = 0.05):
+        visuals = []
+        imgs = []
 
         z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
         w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
@@ -769,6 +799,7 @@ class LatentOptimizer(torch.nn.Module):
 
         w_opt = torch.tensor(w_avg, dtype=torch.float32, device="cuda", requires_grad=True)
         optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=initial_learning_rate)
+
         loss_fcn = nn.MSELoss()
         # loss_fcn1 = lpips.LPIPS(net ='alex')
         # loss_fcn1.cuda()
@@ -785,6 +816,7 @@ class LatentOptimizer(torch.nn.Module):
             gen_png = self.genToPng(img)
             path = 'current_guess.png'
             gen_png.save(path)
+
             # ---start---
             linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
                                         dtype=torch.float32, device="cuda")
@@ -815,6 +847,10 @@ class LatentOptimizer(torch.nn.Module):
             optimizer.step()
             loss_tracker.append(loss.detach().cpu())
             if loss < mse_min:
+
+                self.engine.getVisuals(self.retinaPath, path)
+                visuals.append(Image.open(self.visualPath).convert('RGB'))
+                imgs.append(gen_png)
                 mse_min = loss
                 best_w = ws
 
@@ -825,9 +861,11 @@ class LatentOptimizer(torch.nn.Module):
         plt.plot(loss_tracker)
         plt.show()
 
-        return best_w
+        return best_w, imgs, visuals
 
     def layer_useCone(self, ws, targ_coneExc):
+        visuals = []
+        imgs = []
         loss_fcn = nn.MSELoss()
         #loss_fcn1 = lpips.LPIPS(net='alex')
         #loss_fcn1.cuda()
@@ -879,6 +917,9 @@ class LatentOptimizer(torch.nn.Module):
                 #loss += 80 * - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim=0))
 
                 if loss < mse_min:
+                    self.engine.getVisuals(self.retinaPath, path)
+                    visuals.append(Image.open(self.visualPath).convert('RGB'))
+                    imgs.append(gen_png)
                     mse_min = loss
                     best_w = to_synt[0, i].detach().clone()
                     best_img = img
@@ -902,4 +943,4 @@ class LatentOptimizer(torch.nn.Module):
         im = self.genToPng(img)
         im.save('best_proj_cone.png')
 
-        return ws, best_img
+        return ws, imgs, visuals
