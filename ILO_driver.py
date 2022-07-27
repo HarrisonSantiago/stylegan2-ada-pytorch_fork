@@ -23,6 +23,7 @@ import copy
 import matlab.engine
 import lpips
 import scipy.io as sio
+import imageio
 
 
 
@@ -764,29 +765,24 @@ class LatentOptimizer(torch.nn.Module):
         coneExc = torch.matmul(self.render, flat)
 
 
-        #targ_rec = torch.matmul(self.coneInv, coneExc)
-        #targ_rec = torch.reshape(targ_rec, (32, 32, 3))
-        #targ_rec = targ_rec.permute((2, 0, 1))
-        #save_image(targ_rec, 'target_useCone.png')
-
         # ---reconstruction---
-        #best_w, imgs, visuals = self.useCone_step1(coneExc)
-#
+        best_w, imgs, visuals = self.useCone_step1(coneExc)
+
         #ws, imgs1, visuals1 = self.layer_useCone(best_w, coneExc)
 #
-        #bottoms = []
-        #for img, visual in zip(imgs, visuals):
-        #    bottoms.append(get_concat_h_multi_blank([img, visual]))
+        bottoms = []
+        for img, visual in zip(imgs, visuals):
+            bottoms.append(get_concat_h_multi_blank([img, visual]))
         #for img, visual in zip(imgs1, visuals1):
         #    bottoms.append(get_concat_h_multi_blank([img, visual]))
 #
 #
-        #if saveVideo:
-        #    video = imageio.get_writer('proj.mp4', mode='I', fps=10, codec='libx264', bitrate='16M')
-        #    print(f'Saving optimization progress video "{outdir}/proj.mp4"')
-        #    for img in bottoms:
-        #        video.append_data(np.concatenate([top, img], axis=2))
-        #    video.close()
+        if saveVideo:
+            video = imageio.get_writer('proj.mp4', mode='I', fps=10, codec='libx264', bitrate='16M')
+            print('Saving optimization progress video proj.mp4')
+            for img in bottoms:
+                video.append_data(np.concatenate([top, img], axis=2))
+            video.close()
 
         return 0
 
