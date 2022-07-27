@@ -745,6 +745,7 @@ class LatentOptimizer(torch.nn.Module):
 
         #mp4 stuff
         og_image = Image.open(targ_path).convert('RGB')
+        og_image = og_image.resize((64, 64), Image.ANTIALIAS)
         #w, h = og_image.size
         #s = min(w, h)
         #target_pil = og_image.crop(((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2))
