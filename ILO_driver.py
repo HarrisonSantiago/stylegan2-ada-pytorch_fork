@@ -751,7 +751,8 @@ class LatentOptimizer(torch.nn.Module):
         #target_pil = target_pil.resize((self.G.img_resolution, self.G.img_resolution), Image.LANCZOS)
         #target_uint8 = np.array(target_pil, dtype=np.uint8)
         #ending getting target image for mp4
-        self.engine.getVisuals(self.retinaPath, targ_path)
+
+        self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + targ_path)
         og_visual = Image.open(self.visualPath).convert('RGB')
 
         top = get_concat_h_multi_blank([og_image, og_visual])
