@@ -815,6 +815,10 @@ class LatentOptimizer(torch.nn.Module):
             path = 'current_guess.png'
             gen_png.save(path)
 
+            bigImage = gen_png.resize((64, 64), resample=Image.Resampling.NEAREST)
+            b_path = 'upscaled.png'
+            bigImage.save(b_path)
+
             # ---start---
             linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
                                         dtype=torch.float32, device="cuda")
@@ -846,7 +850,7 @@ class LatentOptimizer(torch.nn.Module):
             loss_tracker.append(loss.detach().cpu())
             if loss < mse_min:
 
-                self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + path, nargout = 0)
+                self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout = 0)
                 visuals.append(Image.open(self.visualPath).convert('RGB'))
                 imgs.append(gen_png)
                 mse_min = loss
