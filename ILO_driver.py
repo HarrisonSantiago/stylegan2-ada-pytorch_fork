@@ -756,8 +756,9 @@ class LatentOptimizer(torch.nn.Module):
 
         best_w = self.useCone_step1(coneExc)
 
-        a, b = self.layer_useCone(best_w, coneExc)
-        return 0
+        ws, best_img = self.layer_useCone(best_w, coneExc)
+
+        return ws
 
     def useCone_step1(self, targ_coneExc, w_avg_samples = 10000, initial_learning_rate = 0.05):
 
