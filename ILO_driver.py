@@ -785,7 +785,7 @@ class LatentOptimizer(torch.nn.Module):
                 print(np.array(top).shape)
 
                 print(np.array(img).shape)
-                video.append_data(np.concatenate([np.array(top), np.array(img)], axis=2))
+                video.append_data(np.concatenate([np.transpose(np.array(top),(2,1,0)), np.transpose(np.array(img), (2,1,0))], axis=2))
             video.close()
 
         return 0
