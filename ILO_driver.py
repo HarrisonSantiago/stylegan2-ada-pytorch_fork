@@ -746,7 +746,7 @@ class LatentOptimizer(torch.nn.Module):
 
         #mp4 stuff
         og_image = Image.open(targ_path).convert('RGB')
-        og_image = og_image.resize((64, 64), resample=Image.Resampling.NEAREST)
+        og_image = og_image.resize((256, 256), resample=Image.Resampling.NEAREST)
         #w, h = og_image.size
         #s = min(w, h)
         #target_pil = og_image.crop(((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2))
@@ -778,7 +778,7 @@ class LatentOptimizer(torch.nn.Module):
 #
 
         if saveVideo:
-            video = imageio.get_writer('proj.mp4', mode='I', fps=10, codec='libx264', bitrate='16M')
+            video = imageio.get_writer('proj_test.mp4', mode='I', fps=5, codec='libx264', bitrate='16M')
             print('Saving optimization progress video proj.mp4')
             top = np.array(top)
             for img in bottoms:
@@ -812,7 +812,7 @@ class LatentOptimizer(torch.nn.Module):
 
         loss_tracker = []
 
-        for step in range(5):
+        for step in range(100):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
@@ -821,7 +821,7 @@ class LatentOptimizer(torch.nn.Module):
             path = 'current_guess.png'
             gen_png.save(path)
 
-            bigImage = gen_png.resize((64, 64), resample=Image.Resampling.NEAREST)
+            bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
             b_path = 'upscaled.png'
             bigImage.save(b_path)
 
