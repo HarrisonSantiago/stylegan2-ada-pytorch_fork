@@ -852,7 +852,7 @@ class LatentOptimizer(torch.nn.Module):
 
                 self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout = 0)
                 visuals.append(Image.open(self.visualPath).convert('RGB'))
-                imgs.append(gen_png)
+                imgs.append(bigImage)
                 mse_min = loss
                 best_w = ws
 
