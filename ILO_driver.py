@@ -781,10 +781,10 @@ class LatentOptimizer(torch.nn.Module):
             video = imageio.get_writer('proj.mp4', mode='I', fps=10, codec='libx264', bitrate='16M')
             print('Saving optimization progress video proj.mp4')
             for img in bottoms:
-                print(type(top.getdata()))
-                print(top.getdata().shape)
 
-                print(img.getdata().shape)
+                print(np.array(top).shape)
+
+                print(np.array(img).shape)
                 video.append_data(np.concatenate([top, img], axis=2))
             video.close()
 
