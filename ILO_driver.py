@@ -773,8 +773,8 @@ class LatentOptimizer(torch.nn.Module):
         bottoms = []
         for img, visual in zip(imgs, visuals):
             bottoms.append(get_concat_h_multi_blank([img, visual]))
-        for img, visual in zip(imgs1, visuals1):
-            bottoms.append(get_concat_h_multi_blank([img, visual]))
+        #for img, visual in zip(imgs1, visuals1):
+         #   bottoms.append(get_concat_h_multi_blank([img, visual]))
 #
 
         if saveVideo:
@@ -813,7 +813,7 @@ class LatentOptimizer(torch.nn.Module):
 
         loss_tracker = []
 
-        for step in range(100):
+        for step in range(10):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
