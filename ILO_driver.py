@@ -768,7 +768,7 @@ class LatentOptimizer(torch.nn.Module):
         # ---reconstruction---
         best_w, imgs, visuals = self.useCone_step1(coneExc)
 
-        ws, imgs1, visuals1 = self.layer_useCone(best_w, coneExc)
+        #ws, imgs1, visuals1 = self.layer_useCone(best_w, coneExc)
 #
         bottoms = []
         for img, visual in zip(imgs, visuals):
