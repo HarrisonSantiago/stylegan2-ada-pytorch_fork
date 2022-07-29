@@ -784,9 +784,9 @@ class LatentOptimizer(torch.nn.Module):
             for img in bottoms:
 
                 img1 = np.array(img)
-                print(top.shape)
+                #print(top.shape)
 
-                print(img1.shape)
+                #print(img1.shape)
                 video.append_data(np.concatenate([top, img1], axis=0))
             video.close()
 
