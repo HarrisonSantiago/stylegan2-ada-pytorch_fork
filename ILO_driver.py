@@ -930,7 +930,7 @@ class LatentOptimizer(torch.nn.Module):
 
                 if loss < mse_min:
                     counter += 1
-                    if counter % 4 == 0:
+                    if counter % 5 == 0:
                         bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
                         b_path = 'upscaled.png'
                         bigImage.save(b_path)
