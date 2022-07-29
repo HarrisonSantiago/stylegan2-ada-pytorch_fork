@@ -5,7 +5,9 @@ function init(home_dir, im_width)
 
     name = strcat(home_dir, "/retina",im_width,".mat");
     if exist(name, 'file')
-        disp('retina, render, and pinv_render exist for this size')
+        disp('retina, render, and pinv_render exist for this size, loading retina...')
+        name = strcat(home_dir, "/render",im_width,".mat");
+        retina = load(name, "retina");
     else
         disp('--- Creating retina ---')
         retina = ConeResponse('eccBasedConeDensity', true, 'eccBasedConeQuantal', true, ...
@@ -25,5 +27,9 @@ function init(home_dir, im_width)
         name = strcat(home_dir, "/render_pinv", im_width, ".mat");
         save(name, "render_pinv");
     end
+
+    disp('--- creating global retina variable ---')
+    global stored_retina;
+    stored_retina = retina;
 
 end 

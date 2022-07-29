@@ -3,7 +3,10 @@ function getVisuals(retinaPath, imPath)
     %modified visualExcitation and visualizeOI so that they would return
     %the frame
     
-    load(retinaPath, "retina")
+    %load(retinaPath, "retina")
+    global stored_retina;
+    retina = stored_retina;
+
     imageRGB = imread(imPath);
     
     [~, ~, ~, ~] = retina.compute(double(imageRGB));

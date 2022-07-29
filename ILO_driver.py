@@ -793,6 +793,7 @@ class LatentOptimizer(torch.nn.Module):
         return 0
 
     def useCone_step1(self, targ_coneExc, w_avg_samples = 10000, initial_learning_rate = 0.05):
+        counter = 0
         visuals = []
         imgs = []
 
@@ -834,8 +835,7 @@ class LatentOptimizer(torch.nn.Module):
             # img = linear + c
             # c = img - linear
             # img - c = linear
-            print(img.shape)
-            print(linear_image.shape)
+
             c = img.detach().clone() - linear_image.detach().clone()
             img -= c
 
@@ -853,12 +853,14 @@ class LatentOptimizer(torch.nn.Module):
             optimizer.step()
             loss_tracker.append(loss.detach().cpu())
             if loss < mse_min:
-                bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
-                b_path = 'upscaled.png'
-                bigImage.save(b_path)
-                self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout = 0)
-                visuals.append(Image.open(self.visualPath).convert('RGB'))
-                imgs.append(bigImage)
+                counter +=1
+                if counter < 50 or counter%4 == 0:
+                    bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
+                    b_path = 'upscaled.png'
+                    bigImage.save(b_path)
+                    self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout = 0)
+                    visuals.append(Image.open(self.visualPath).convert('RGB'))
+                    imgs.append(bigImage)
                 mse_min = loss
                 best_w = ws
 
@@ -872,6 +874,7 @@ class LatentOptimizer(torch.nn.Module):
         return best_w, imgs, visuals
 
     def layer_useCone(self, ws, targ_coneExc):
+        counter = 0
         visuals = []
         imgs = []
         loss_fcn = nn.MSELoss()
@@ -913,8 +916,7 @@ class LatentOptimizer(torch.nn.Module):
                 # img = linear + c
                 # c = img - linear
                 # img - c = linear
-                print(img.shape)
-                print(linear_image.shape)
+
                 c = img.detach().clone() - linear_image.detach().clone()
                 img -= c
 
@@ -927,12 +929,14 @@ class LatentOptimizer(torch.nn.Module):
                 #loss += 80 * - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim=0))
 
                 if loss < mse_min:
-                    bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
-                    b_path = 'upscaled.png'
-                    bigImage.save(b_path)
-                    self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout=0)
-                    visuals.append(Image.open(self.visualPath).convert('RGB'))
-                    imgs.append(bigImage)
+                    counter += 1
+                    if counter % 4 == 0:
+                        bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
+                        b_path = 'upscaled.png'
+                        bigImage.save(b_path)
+                        self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout=0)
+                        visuals.append(Image.open(self.visualPath).convert('RGB'))
+                        imgs.append(bigImage)
 
                     mse_min = loss
                     best_w = to_synt[0, i].detach().clone()
