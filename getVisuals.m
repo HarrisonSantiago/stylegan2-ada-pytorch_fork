@@ -4,6 +4,7 @@ function getVisuals(retinaPath, imPath)
     %the frame
     
     %load(retinaPath, "retina")
+
     global stored_retina;
     retina = stored_retina;
 
