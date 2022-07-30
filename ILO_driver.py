@@ -962,3 +962,266 @@ class LatentOptimizer(torch.nn.Module):
         im.save('best_proj_cone.png')
 
         return ws, imgs, visuals
+
+
+    def cone_blitz(self, targ_coneExc, save_vid = True, w_avg_samples=10000, initial_learning_rate=0.05):
+
+        #Harrison - Refer to google doc
+        counter = 0
+        visuals = []
+        imgs = []
+
+        z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
+        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
+        w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
+        w_avg = np.mean(w_samples, axis=0, keepdims=True)
+
+
+        loss_fcn = nn.MSELoss()
+        mse_min = np.inf
+        num_steps = 50
+        ws = w_avg.detach().clone()
+
+
+
+        for i in range(1, ws.shape[1] - 1):
+            loss_tracker = []
+
+            w_opt = torch.tensor(ws[0, :i], dtype=torch.float32, device="cuda", requires_grad=True)
+
+            optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
+            static = torch.unsqueeze(ws[0, i:], dim=0)
+
+            for step in range(num_steps):
+                opt = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
+                to_synt = torch.cat((opt, static), dim=1)
+
+                img = self.G.synthesis(to_synt, noise_mode='const')
+                gen_png = self.genToPng(img)
+                path = 'current_guess.png'
+                gen_png.save(path)
+
+                # ---start---
+                linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
+                                            dtype=torch.float32, device="cuda")
+
+                img = torch.squeeze(img)
+                img = img.permute((1, 2, 0))
+
+                c = img.detach().clone() - linear_image.detach().clone()
+                img -= c
+
+                flat = torch.flatten(img)
+                gen_coneExc = torch.matmul(self.render, flat)
+
+                loss = loss_fcn(gen_coneExc, targ_coneExc)
+
+                if loss < mse_min:
+                    counter += 1
+                    if counter % 5 == 0 and save_vid:
+                        bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
+                        b_path = 'upscaled.png'
+                        bigImage.save(b_path)
+                        self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout=0)
+                        visuals.append(Image.open(self.visualPath).convert('RGB'))
+                        imgs.append(bigImage)
+
+                    mse_min = loss
+                    best_w = to_synt[0, :i].detach().clone()
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                loss_tracker.append(loss.detach().cpu())
+
+            plt.plot(loss_tracker)
+            plt.show()
+            ws[0, :i] = best_w
+
+
+        #### Now the same but in reverse
+        for i in range(0, ws.shape[1] - 1):
+            loss_tracker = []
+
+            w_opt = torch.tensor(ws[0, i:], dtype=torch.float32, device="cuda", requires_grad=True)
+
+            optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
+            static = torch.unsqueeze(ws[0, :i], dim=0)
+
+            for step in range(num_steps):
+                opt = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
+                to_synt = torch.cat((opt, static), dim=1)
+
+                img = self.G.synthesis(to_synt, noise_mode='const')
+                gen_png = self.genToPng(img)
+                path = 'current_guess.png'
+                gen_png.save(path)
+
+                # ---start---
+                linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
+                                            dtype=torch.float32, device="cuda")
+
+                img = torch.squeeze(img)
+                img = img.permute((1, 2, 0))
+
+                c = img.detach().clone() - linear_image.detach().clone()
+                img -= c
+
+                flat = torch.flatten(img)
+                gen_coneExc = torch.matmul(self.render, flat)
+
+                loss = loss_fcn(gen_coneExc, targ_coneExc)
+
+                if loss < mse_min:
+                    counter += 1
+                    if counter % 5 == 0 and save_vid:
+                        bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
+                        b_path = 'upscaled.png'
+                        bigImage.save(b_path)
+                        self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout=0)
+                        visuals.append(Image.open(self.visualPath).convert('RGB'))
+                        imgs.append(bigImage)
+
+                    mse_min = loss
+                    best_w = to_synt[0, i:].detach().clone()
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+                loss_tracker.append(loss.detach().cpu())
+
+            plt.plot(loss_tracker)
+            plt.show()
+            ws[0, i:] = best_w
+
+
+        img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('best_blitz_cone.png')
+
+        return ws, imgs, visuals
+
+    def cone_blitzv2(self, targ_coneExc, w_avg_samples=10000, initial_learning_rate=0.05):
+        # Harrison - Refer to google doc
+        counter = 0
+        visuals = []
+        imgs = []
+
+        z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
+        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
+        w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
+        w_avg = np.mean(w_samples, axis=0, keepdims=True)
+
+        loss_fcn = nn.MSELoss()
+        mse_min = np.inf
+        num_steps = 50
+        ws = w_avg.detach().clone()
+        tracker = []
+
+        for i in range(0, ws.shape[1] - 1):
+            tracker.append(0)
+
+        for i in range(0, ws.shape[1] - 1):
+            tracker[i] = 1
+            for j in range(len(tracker)):
+                if tracker[j] == 1:
+                    ws = self.cone_blitzv2Inner(ws, j, targ_coneExc)
+
+        for i in range(0, ws.shape[1] - 1):
+            tracker[i] = 0
+            for j in range(len(tracker)):
+                if tracker[j] == 1:
+                    ws = self.cone_blitzv2Inner(ws, j, targ_coneExc)
+
+        img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('best_coneblitzv2.png')
+
+        return 0
+
+    def cone_blitzv2Inner(self, ws, i, targ_coneExc):
+        visuals = []
+        imgs = []
+        counter = 0
+        num_steps = 50
+        loss_fcn = nn.MSELoss()
+
+        ws = ws.detach().clone()
+
+        loss_tracker = []
+
+        w_opt = torch.tensor(ws[0, i], dtype=torch.float32, device="cuda", requires_grad=True)
+
+        optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
+
+        beg = torch.unsqueeze(ws[0, :i], dim=0)
+        end = torch.unsqueeze(ws[0, i + 1:], dim=0)
+
+        for step in range(num_steps):
+            mid = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
+            to_synt = torch.cat((beg, mid, end), dim=1)
+
+            img = self.G.synthesis(to_synt, noise_mode='const')
+            gen_png = self.genToPng(img)
+            path = 'current_guess.png'
+            gen_png.save(path)
+
+            # ---start---
+            linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
+                                        dtype=torch.float32, device="cuda")
+
+            # here linear_image is the adjustment we need to make
+            img = torch.squeeze(img)
+            img = img.permute((1, 2, 0))
+            # want to adjust img to gen_rec without loosing the comp map
+            # img = linear + c
+            # c = img - linear
+            # img - c = linear
+
+            c = img.detach().clone() - linear_image.detach().clone()
+            img -= c
+
+            flat = torch.flatten(img)
+            gen_coneExc = torch.matmul(self.render, flat)
+
+            # for MSELoss
+            loss = loss_fcn(gen_coneExc, targ_coneExc)
+
+
+            if loss < mse_min:
+                counter += 1
+                if counter % 5 == 0:
+                    bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
+                    b_path = 'upscaled.png'
+                    bigImage.save(b_path)
+                    self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout=0)
+                    visuals.append(Image.open(self.visualPath).convert('RGB'))
+                    imgs.append(bigImage)
+
+                mse_min = loss
+                best_w = to_synt[0, i].detach().clone()
+                best_img = img
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            loss_tracker.append(loss.detach().cpu())
+
+        img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save(str(i) + '.png')
+
+        plt.plot(loss_tracker)
+        plt.show()
+        ws[0, i] = best_w
+
+        img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('best_proj_cone.png')
+
+        return ws, visuals, imgs
+
+
