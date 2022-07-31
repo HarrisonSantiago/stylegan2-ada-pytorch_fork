@@ -1120,21 +1120,22 @@ class LatentOptimizer(torch.nn.Module):
 
         return ws, imgs, visuals
 
-    def cone_blitzv2(self, targ_coneExc, w_avg_samples=10000, initial_learning_rate=0.05):
+    def cone_blitzv2(self, targ_path, w_avg_samples=10000, initial_learning_rate=0.05):
         # Harrison - Refer to google doc
         counter = 0
         visuals = []
         imgs = []
 
-        z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
-        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
-        w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
-        w_avg = np.mean(w_samples, axis=0, keepdims=True)
+        linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(targ_path, self.retinaPath)),
+                                    dtype=torch.float32, device="cuda")
+        flat = torch.flatten(linear_image)
+        targ_coneExc = torch.matmul(self.render, flat)
+        best_w, imgs, visuals = self.useCone_step1(targ_coneExc, save_vid=False)
 
         loss_fcn = nn.MSELoss()
         mse_min = np.inf
         num_steps = 50
-        ws = w_avg.detach().clone()
+        ws = best_w
         tracker = []
         loss_tracker = []
 
@@ -1145,14 +1146,14 @@ class LatentOptimizer(torch.nn.Module):
             tracker[i] = 1
             for j in range(len(tracker)):
                 if tracker[j] == 1:
-                    ws, losses = self.cone_blitzv2Inner(ws, j, targ_coneExc)
+                    ws, losses = self.cone_blitzv2Inner(ws, j, targ_coneExc, save_vid=False)
                     loss_tracker += losses
 
         for i in range(0, ws.shape[1] - 1):
             tracker[i] = 0
             for j in range(len(tracker)):
                 if tracker[j] == 1:
-                    ws,losses = self.cone_blitzv2Inner(ws, j, targ_coneExc)
+                    ws,losses = self.cone_blitzv2Inner(ws, j, targ_coneExc, save_vid = False)
                     loss_tracker += losses
 
         img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
