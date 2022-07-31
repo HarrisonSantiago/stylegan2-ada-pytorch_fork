@@ -1000,8 +1000,10 @@ class LatentOptimizer(torch.nn.Module):
 
             for step in range(num_steps):
                 opt = torch.unsqueeze(w_opt, dim=0)
-
+                print('opt: ', opt.shape)
+                print('statix: ', static.shape)
                 to_synt = torch.cat((opt, static), dim=1)
+                print('to_synth', to_synt.shape)
 
                 img = self.G.synthesis(to_synt, noise_mode='const')
                 gen_png = self.genToPng(img)
@@ -1034,6 +1036,8 @@ class LatentOptimizer(torch.nn.Module):
                         imgs.append(bigImage)
 
                     mse_min = loss
+                    print('w-opt shape: ', w_opt.shape)
+                    print('best_w shape', to_synt[0,:i].shape)
                     best_w = to_synt[0, :i].detach().clone()
 
                 optimizer.zero_grad()
@@ -1048,7 +1052,7 @@ class LatentOptimizer(torch.nn.Module):
             print(best_w.shape)
             ws[0, :i] = best_w
 
-
+        print('going to the second part')
         #### Now the same but in reverse
         for i in range(0, ws.shape[1] - 2):
             loss_tracker = []
