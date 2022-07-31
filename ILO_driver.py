@@ -741,12 +741,12 @@ class LatentOptimizer(torch.nn.Module):
 
         return ws, best_img
 
-    def recon_useCone(self, targ_path, saveVideo = True):
+    def recon_useCone(self, targ_path, saveVideo = True, more_loss = False):
         # ---start---
 
         #mp4 stuff
         og_image = Image.open(targ_path).convert('RGB')
-        og_image = og_image.resize((256, 256), resample=Image.Resampling.NEAREST)
+        og_image_b = og_image.resize((256, 256), resample=Image.Resampling.NEAREST)
         #w, h = og_image.size
         #s = min(w, h)
         #target_pil = og_image.crop(((w - s) // 2, (h - s) // 2, (w + s) // 2, (h + s) // 2))
@@ -757,7 +757,7 @@ class LatentOptimizer(torch.nn.Module):
         self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + targ_path, nargout = 0)
         og_visual = Image.open(self.visualPath).convert('RGB')
 
-        top = get_concat_h_multi_blank([og_image, og_visual])
+        top = get_concat_h_multi_blank([og_image_b, og_visual])
         top.save('combo.png')
         linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(targ_path, self.retinaPath)),
                                     dtype=torch.float32, device="cuda")
@@ -766,9 +766,9 @@ class LatentOptimizer(torch.nn.Module):
 
 
         # ---reconstruction---
-        best_w, imgs, visuals = self.useCone_step1(coneExc)
+        best_w, imgs, visuals = self.useCone_step1(coneExc, more_loss, saveVideo)
 
-        ws, imgs1, visuals1 = self.layer_useCone(best_w, coneExc)
+        ws, imgs1, visuals1 = self.layer_useCone(best_w, coneExc, more_loss, saveVideo)
 #
         bottoms = []
         for img, visual in zip(imgs, visuals):
@@ -790,9 +790,13 @@ class LatentOptimizer(torch.nn.Module):
                 video.append_data(np.concatenate([top, img1], axis=0))
             video.close()
 
+        final_img = Image.open('best_proj_cone.png').convert('RGB')
+        loss_fcn = nn.MSELoss
+        loss = loss_fcn(og_image, final_img)
+        print(loss)
         return 0
 
-    def useCone_step1(self, targ_coneExc, save_vid = True, w_avg_samples = 10000, initial_learning_rate = 0.05):
+    def useCone_step1(self, targ_coneExc, more_loss, save_vid = True, w_avg_samples = 10000, initial_learning_rate = 0.05):
         counter = 0
         visuals = []
         imgs = []
@@ -806,9 +810,10 @@ class LatentOptimizer(torch.nn.Module):
         optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=initial_learning_rate)
 
         loss_fcn = nn.MSELoss()
-        # loss_fcn1 = lpips.LPIPS(net ='alex')
-        # loss_fcn1.cuda()
-        # ssim_loss = pytorch_ssim.SSIM()
+        if more_loss:
+            loss_fcn1 = lpips.LPIPS(net ='alex')
+            loss_fcn1.cuda()
+            ssim_loss = pytorch_ssim.SSIM()
         mse_min = np.inf
 
         loss_tracker = []
@@ -845,8 +850,11 @@ class LatentOptimizer(torch.nn.Module):
 
             # for MSELoss
             loss = loss_fcn(gen_coneExc, targ_coneExc)
-            # loss += torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
-            # loss = - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim = 0))
+            if more_loss:
+                loss += torch.squeeze(loss_fcn1.forward(gen_coneExc, targ_coneExc))
+                loss += 80 * - ssim_loss(gen_coneExc, targ_coneExc)
+
+
 
             optimizer.zero_grad()
             loss.backward()
@@ -873,16 +881,17 @@ class LatentOptimizer(torch.nn.Module):
 
         return best_w, imgs, visuals
 
-    def layer_useCone(self, ws, targ_coneExc):
+    def layer_useCone(self, ws, targ_coneExc, more_loss, save_video):
         counter = 0
         visuals = []
         imgs = []
         loss_fcn = nn.MSELoss()
-        #loss_fcn1 = lpips.LPIPS(net='alex')
-        #loss_fcn1.cuda()
-        #ssim_loss = pytorch_ssim.SSIM()
+        if more_loss:
+            loss_fcn1 = lpips.LPIPS(net='alex')
+            loss_fcn1.cuda()
+            ssim_loss = pytorch_ssim.SSIM()
         mse_min = np.inf
-        num_steps = 550
+        num_steps = 300
         ws = ws.detach().clone()
 
         for i in range(0, ws.shape[1]-1):
@@ -925,12 +934,13 @@ class LatentOptimizer(torch.nn.Module):
 
                 # for MSELoss
                 loss = loss_fcn(gen_coneExc, targ_coneExc)
-                #loss += 1.2 * torch.squeeze(loss_fcn1.forward(gen_img[0], self.targ_img))
-                #loss += 80 * - ssim_loss(gen_img, torch.unsqueeze(self.targ_img, dim=0))
+                if more_loss:
+                    loss += torch.squeeze(loss_fcn1.forward(gen_coneExc, targ_coneExc))
+                    loss += 80 * - ssim_loss(gen_coneExc, targ_coneExc)
 
                 if loss < mse_min:
                     counter += 1
-                    if counter % 5 == 0:
+                    if counter % 5 == 0 and save_video:
                         bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
                         b_path = 'upscaled.png'
                         bigImage.save(b_path)
