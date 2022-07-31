@@ -811,8 +811,8 @@ class LatentOptimizer(torch.nn.Module):
 
         loss_fcn = nn.MSELoss()
         if more_loss:
-            loss_fcn1 = lpips.LPIPS(net ='alex')
-            loss_fcn1.cuda()
+            #loss_fcn1 = lpips.LPIPS(net ='alex')
+            #loss_fcn1.cuda()
             ssim_loss = pytorch_ssim.SSIM()
         mse_min = np.inf
 
@@ -851,7 +851,7 @@ class LatentOptimizer(torch.nn.Module):
             # for MSELoss
             loss = loss_fcn(gen_coneExc, targ_coneExc)
             if more_loss:
-                loss += torch.squeeze(loss_fcn1.forward(gen_coneExc, targ_coneExc))
+                #loss += torch.squeeze(loss_fcn1.forward(gen_coneExc, targ_coneExc))
                 loss += 80 * - ssim_loss(gen_coneExc, targ_coneExc)
 
 
