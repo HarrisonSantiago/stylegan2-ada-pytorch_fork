@@ -1039,6 +1039,7 @@ class LatentOptimizer(torch.nn.Module):
                     print('w-opt shape: ', w_opt.shape)
                     print('best_w shape', to_synt[0,:i].shape)
                     best_w = to_synt[0, :i].detach().clone()
+                    print('actual best_w shape: ', best_w.shape)
 
                 optimizer.zero_grad()
                 loss.backward()
@@ -1049,6 +1050,7 @@ class LatentOptimizer(torch.nn.Module):
             plt.plot(loss_tracker)
             plt.show()
             print(ws[0,:i].shape)
+            print('best shape down here', best_w.shape)
             print(best_w.shape)
             ws[0, :i] = best_w
 
