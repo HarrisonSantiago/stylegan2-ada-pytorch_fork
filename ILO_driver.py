@@ -811,7 +811,7 @@ class LatentOptimizer(torch.nn.Module):
 
         loss_fcn = nn.MSELoss()
         if more_loss:
-            loss_fcn = nn.HuberLoss()
+            loss_fcn = nn.L1Loss()
         mse_min = np.inf
 
         loss_tracker = []
@@ -883,7 +883,7 @@ class LatentOptimizer(torch.nn.Module):
         imgs = []
         loss_fcn = nn.MSELoss()
         if more_loss:
-            loss_fcn = nn.HuberLoss()
+            loss_fcn = nn.L1Loss()
         mse_min = np.inf
         num_steps = 300
         ws = ws.detach().clone()
