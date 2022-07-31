@@ -1136,6 +1136,7 @@ class LatentOptimizer(torch.nn.Module):
         num_steps = 50
         ws = w_avg.detach().clone()
         tracker = []
+        loss_tracker = []
 
         for i in range(0, ws.shape[1] - 1):
             tracker.append(0)
@@ -1144,25 +1145,30 @@ class LatentOptimizer(torch.nn.Module):
             tracker[i] = 1
             for j in range(len(tracker)):
                 if tracker[j] == 1:
-                    ws = self.cone_blitzv2Inner(ws, j, targ_coneExc)
+                    ws, losses = self.cone_blitzv2Inner(ws, j, targ_coneExc)
+                    loss_tracker += losses
 
         for i in range(0, ws.shape[1] - 1):
             tracker[i] = 0
             for j in range(len(tracker)):
                 if tracker[j] == 1:
-                    ws = self.cone_blitzv2Inner(ws, j, targ_coneExc)
+                    ws,losses = self.cone_blitzv2Inner(ws, j, targ_coneExc)
+                    loss_tracker += losses
 
         img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
         im = self.genToPng(img)
         im.save('best_coneblitzv2.png')
 
+        plt.plot(loss_tracker)
+        plt.show()
+
         return 0
 
-    def cone_blitzv2Inner(self, ws, i, targ_coneExc):
+    def cone_blitzv2Inner(self, ws, i, targ_coneExc, save_vid = True):
         visuals = []
         imgs = []
         counter = 0
-        num_steps = 50
+        num_steps = 25
         loss_fcn = nn.MSELoss()
 
         ws = ws.detach().clone()
@@ -1170,6 +1176,7 @@ class LatentOptimizer(torch.nn.Module):
         loss_tracker = []
 
         w_opt = torch.tensor(ws[0, i], dtype=torch.float32, device="cuda", requires_grad=True)
+        best_w = ws[0,i].clone().detach()
 
         optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
 
@@ -1189,13 +1196,8 @@ class LatentOptimizer(torch.nn.Module):
             linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
                                         dtype=torch.float32, device="cuda")
 
-            # here linear_image is the adjustment we need to make
             img = torch.squeeze(img)
             img = img.permute((1, 2, 0))
-            # want to adjust img to gen_rec without loosing the comp map
-            # img = linear + c
-            # c = img - linear
-            # img - c = linear
 
             c = img.detach().clone() - linear_image.detach().clone()
             img -= c
@@ -1206,10 +1208,9 @@ class LatentOptimizer(torch.nn.Module):
             # for MSELoss
             loss = loss_fcn(gen_coneExc, targ_coneExc)
 
-
             if loss < mse_min:
                 counter += 1
-                if counter % 5 == 0:
+                if counter % 5 == 0 and save_vid:
                     bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
                     b_path = 'upscaled.png'
                     bigImage.save(b_path)
@@ -1219,7 +1220,6 @@ class LatentOptimizer(torch.nn.Module):
 
                 mse_min = loss
                 best_w = to_synt[0, i].detach().clone()
-                best_img = img
 
             optimizer.zero_grad()
             loss.backward()
@@ -1231,14 +1231,13 @@ class LatentOptimizer(torch.nn.Module):
         im = self.genToPng(img)
         im.save(str(i) + '.png')
 
-        plt.plot(loss_tracker)
-        plt.show()
+
         ws[0, i] = best_w
 
         img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
         im = self.genToPng(img)
         im.save('best_proj_cone.png')
 
-        return ws, visuals, imgs
+        return ws, loss_tracker
 
 
