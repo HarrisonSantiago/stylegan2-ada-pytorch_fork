@@ -792,7 +792,7 @@ class LatentOptimizer(torch.nn.Module):
 
         return 0
 
-    def useCone_step1(self, targ_coneExc, w_avg_samples = 10000, initial_learning_rate = 0.05):
+    def useCone_step1(self, targ_coneExc, save_vid = True, w_avg_samples = 10000, initial_learning_rate = 0.05):
         counter = 0
         visuals = []
         imgs = []
@@ -854,7 +854,7 @@ class LatentOptimizer(torch.nn.Module):
             loss_tracker.append(loss.detach().cpu())
             if loss < mse_min:
                 counter +=1
-                if counter < 50 or counter%4 == 0:
+                if counter < 50 or counter%4 == 0 and save_vid:
                     bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
                     b_path = 'upscaled.png'
                     bigImage.save(b_path)
@@ -966,7 +966,7 @@ class LatentOptimizer(torch.nn.Module):
 
     def cone_blitz(self, targ_path, save_vid = True, w_avg_samples=10000, initial_learning_rate=0.05):
 
-
+        best_w, imgs, visuals = self.useCone_step1()
         linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(targ_path, self.retinaPath)),
                                     dtype=torch.float32, device="cuda")
         flat = torch.flatten(linear_image)
@@ -978,17 +978,13 @@ class LatentOptimizer(torch.nn.Module):
         visuals = []
         imgs = []
 
-        z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
-        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
-        w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
-        w_avg = np.mean(w_samples, axis=0, keepdims=True)
+        best_w, imgs, visuals = self.useCone_step1(targ_coneExc, save_vid=False)
 
 
         loss_fcn = nn.MSELoss()
         mse_min = np.inf
         num_steps = 50
-        w_opt = torch.tensor(w_avg, dtype=torch.float32, device="cuda", requires_grad=True)
-        ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
+        ws = best_w
 
 
         print(ws.shape)
@@ -1003,6 +999,8 @@ class LatentOptimizer(torch.nn.Module):
 
             for step in range(num_steps):
                 opt = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
+                print(opt.shape)
+                print(static.shape)
                 to_synt = torch.cat((opt, static), dim=1)
 
                 img = self.G.synthesis(to_synt, noise_mode='const')
