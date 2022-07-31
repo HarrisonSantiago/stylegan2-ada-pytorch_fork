@@ -1059,7 +1059,7 @@ class LatentOptimizer(torch.nn.Module):
             static = torch.unsqueeze(ws[0, :i], dim=0)
 
             for step in range(num_steps):
-                opt = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
+                opt = torch.unsqueeze(w_opt, dim=0)
                 to_synt = torch.cat((opt, static), dim=1)
 
                 img = self.G.synthesis(to_synt, noise_mode='const')
