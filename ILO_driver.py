@@ -1059,11 +1059,12 @@ class LatentOptimizer(torch.nn.Module):
         #### Now the same but in reverse
         for i in range(0, ws.shape[1] - 2):
             loss_tracker = []
-
+            ws = ws.clone().detach()
             w_opt = torch.tensor(ws[0, i:], dtype=torch.float32, device="cuda", requires_grad=True)
 
             optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
             static = torch.unsqueeze(ws[0, :i], dim=0)
+            best_w = w_opt.clone().detach()
 
             for step in range(num_steps):
                 opt = torch.unsqueeze(w_opt, dim=0)
