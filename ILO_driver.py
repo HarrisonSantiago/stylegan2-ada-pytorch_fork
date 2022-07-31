@@ -987,7 +987,8 @@ class LatentOptimizer(torch.nn.Module):
         loss_fcn = nn.MSELoss()
         mse_min = np.inf
         num_steps = 50
-        ws = w_avg
+
+        ws = w_avg.repeat([1, self.G.mapping.num_ws, 1])
 
 
         print(ws.shape)
