@@ -990,7 +990,7 @@ class LatentOptimizer(torch.nn.Module):
         ws = w_avg
 
 
-
+        print(ws.shape)
         for i in range(1, ws.shape[1] - 1):
             print(i)
             loss_tracker = []
