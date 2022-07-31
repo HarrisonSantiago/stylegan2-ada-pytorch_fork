@@ -992,6 +992,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
         for i in range(1, ws.shape[1] - 1):
+            print(i)
             loss_tracker = []
 
             w_opt = torch.tensor(ws[0, :i], dtype=torch.float32, device="cuda", requires_grad=True)
