@@ -1133,7 +1133,7 @@ class LatentOptimizer(torch.nn.Module):
         best_w, imgs, visuals = self.useCone_step1(targ_coneExc, save_vid=False)
 
         loss_fcn = nn.MSELoss()
-        mse_min = np.inf
+
         num_steps = 50
         ws = best_w
         tracker = []
@@ -1170,6 +1170,7 @@ class LatentOptimizer(torch.nn.Module):
         imgs = []
         counter = 0
         num_steps = 25
+        mse_min = np.inf
         loss_fcn = nn.MSELoss()
 
         ws = ws.detach().clone()
