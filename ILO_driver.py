@@ -813,7 +813,7 @@ class LatentOptimizer(torch.nn.Module):
 
         loss_tracker = []
 
-        for step in range(25):
+        for step in range(100):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
@@ -983,7 +983,7 @@ class LatentOptimizer(torch.nn.Module):
 
         loss_fcn = nn.MSELoss()
         mse_min = np.inf
-        num_steps = 5
+        num_steps = 50
         ws = best_w
 
 
