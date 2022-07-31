@@ -1092,7 +1092,7 @@ class LatentOptimizer(torch.nn.Module):
                         imgs.append(bigImage)
 
                     mse_min = loss
-                    best_w = to_synt[0, i:].detach().clone()
+                    best_w = to_synt[0, i:-2].detach().clone()
 
                 optimizer.zero_grad()
                 loss.backward()
