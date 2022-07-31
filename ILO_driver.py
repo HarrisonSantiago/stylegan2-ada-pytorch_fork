@@ -810,8 +810,7 @@ class LatentOptimizer(torch.nn.Module):
         optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=initial_learning_rate)
 
         loss_fcn = nn.MSELoss()
-        if more_loss:
-            loss_fcn = nn.L1Loss()
+
         mse_min = np.inf
 
         loss_tracker = []
@@ -883,7 +882,7 @@ class LatentOptimizer(torch.nn.Module):
         imgs = []
         loss_fcn = nn.MSELoss()
         if more_loss:
-            loss_fcn = nn.L1Loss()
+            loss_fcn1 = nn.L1Loss()
         mse_min = np.inf
         num_steps = 300
         ws = ws.detach().clone()
@@ -928,6 +927,7 @@ class LatentOptimizer(torch.nn.Module):
 
                 # for MSELoss
                 loss = loss_fcn(gen_coneExc, targ_coneExc)
+                loss += 20 * loss_fcn1(gen_coneExc, targ_coneExc)
 
 
                 if loss < mse_min:
