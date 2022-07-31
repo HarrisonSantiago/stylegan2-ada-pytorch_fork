@@ -1139,17 +1139,17 @@ class LatentOptimizer(torch.nn.Module):
         tracker = []
         loss_tracker = []
 
-        for i in range(0, ws.shape[1] - 1):
+        for i in range(0, ws.shape[1] - 2):
             tracker.append(0)
 
-        for i in range(0, ws.shape[1] - 1):
+        for i in range(0, ws.shape[1] - 2):
             tracker[i] = 1
             for j in range(len(tracker)):
                 if tracker[j] == 1:
                     ws, losses = self.cone_blitzv2Inner(ws, j, targ_coneExc, save_vid=False)
                     loss_tracker += losses
 
-        for i in range(0, ws.shape[1] - 1):
+        for i in range(0, ws.shape[1] - 2):
             tracker[i] = 0
             for j in range(len(tracker)):
                 if tracker[j] == 1:
