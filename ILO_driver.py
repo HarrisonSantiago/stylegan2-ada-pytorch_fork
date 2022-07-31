@@ -997,6 +997,7 @@ class LatentOptimizer(torch.nn.Module):
 
             optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
             static = torch.unsqueeze(ws[0, i:], dim=0)
+            best_w = w_opt.clone().detach()
 
             for step in range(num_steps):
                 opt = torch.unsqueeze(w_opt, dim=0)
