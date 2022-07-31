@@ -1000,8 +1000,7 @@ class LatentOptimizer(torch.nn.Module):
 
             for step in range(num_steps):
                 opt = torch.unsqueeze(w_opt, dim=0)
-                print(opt.shape)
-                print(static.shape)
+
                 to_synt = torch.cat((opt, static), dim=1)
 
                 img = self.G.synthesis(to_synt, noise_mode='const')
@@ -1045,6 +1044,8 @@ class LatentOptimizer(torch.nn.Module):
 
             plt.plot(loss_tracker)
             plt.show()
+            print(ws[0,:i].shape)
+            print(best_w.shape)
             ws[0, :i] = best_w
 
 
