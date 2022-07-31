@@ -964,7 +964,14 @@ class LatentOptimizer(torch.nn.Module):
         return ws, imgs, visuals
 
 
-    def cone_blitz(self, targ_coneExc, save_vid = True, w_avg_samples=10000, initial_learning_rate=0.05):
+    def cone_blitz(self, targ_path, save_vid = True, w_avg_samples=10000, initial_learning_rate=0.05):
+
+
+        linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(targ_path, self.retinaPath)),
+                                    dtype=torch.float32, device="cuda")
+        flat = torch.flatten(linear_image)
+        targ_coneExc = torch.matmul(self.render, flat)
+
 
         #Harrison - Refer to google doc
         counter = 0
