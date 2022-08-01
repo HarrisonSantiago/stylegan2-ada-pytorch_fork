@@ -934,7 +934,8 @@ class LatentOptimizer(torch.nn.Module):
 
                 # for MSELoss
                 loss = loss_fcn(gen_coneExc, targ_coneExc)
-                loss += 20 * loss_fcn1(gen_coneExc, targ_coneExc)
+                if more_loss:
+                    loss += 20 * loss_fcn1(gen_coneExc, targ_coneExc)
 
 
                 if loss < mse_min:
