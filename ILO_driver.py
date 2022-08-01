@@ -58,18 +58,25 @@ class SphericalOptimizer():
             param.mul_(self.radii[param])
 
 class LatentOptimizer(torch.nn.Module):
-    def __init__(self, config, Generator, im_width, device=torch.device):
+    def __init__(self, config, Generator, im_width, distance = False, device=torch.device):
         super().__init__()
         self.config = config
         #---creates matlab engine---
         self.engine = matlab.engine.start_matlab()
 
         self.home_dir = self.engine.pwd()
-        self.engine.init(self.home_dir, im_width, nargout = 0) #loads ISETBio stuff and creates the retina object
-        self.engine.cd(self.home_dir)
-        self.retinaPath = self.home_dir+ "/retina"+im_width+".mat"
-        self.coneInvPath = self.home_dir+ "/render_pinv"+im_width+".mat"
-        self.renderPath = self.home_dir+ "/render"+im_width+".mat"
+        if distance:
+            self.engine.init_distance(self.home_dir, im_width, nargout=0)
+            self.engine.cd(self.home_dir)
+            self.retinaPath = self.home_dir + "/retina_distance" + im_width + ".mat"
+            self.coneInvPath = self.home_dir + "/render_distance_pinv" + im_width + ".mat"
+            self.renderPath = self.home_dir + "/render_distance" + im_width + ".mat"
+        else:
+            self.engine.init(self.home_dir, im_width, nargout = 0) #loads ISETBio stuff and creates the retina object
+            self.engine.cd(self.home_dir)
+            self.retinaPath = self.home_dir+ "/retina"+im_width+".mat"
+            self.coneInvPath = self.home_dir+ "/render_pinv"+im_width+".mat"
+            self.renderPath = self.home_dir+ "/render"+im_width+".mat"
         self.coneInv = torch.tensor(sio.loadmat(self.coneInvPath)['render_pinv'], dtype = torch.float32, device = "cuda")
         self.render = torch.tensor(sio.loadmat(self.renderPath)['render'], dtype = torch.float32, device = "cuda")
         self.visualPath = "for_mp4.png"
