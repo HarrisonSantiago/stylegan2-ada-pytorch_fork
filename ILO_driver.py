@@ -822,7 +822,7 @@ class LatentOptimizer(torch.nn.Module):
 
         loss_tracker = []
 
-        for step in range(100):
+        for step in range(40):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
             img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
@@ -891,7 +891,7 @@ class LatentOptimizer(torch.nn.Module):
         if more_loss:
             loss_fcn1 = nn.L1Loss()
         mse_min = np.inf
-        num_steps = 300
+        num_steps = 450
         ws = ws.detach().clone()
 
         for i in range(0, ws.shape[1]-3):
@@ -1144,24 +1144,26 @@ class LatentOptimizer(torch.nn.Module):
 
         loss_fcn = nn.MSELoss()
 
-        num_steps = 50
+        #prev 50
+        num_steps = 25
         ws = best_w
 
         loss_tracker = []
 
-        for _ in range(5):
+        #prev 5
+        for _ in range(10):
             tracker = []
-            for i in range(0, ws.shape[1] - 2):
+            for i in range(0, ws.shape[1] - 3):
                 tracker.append(0)
 
-            for i in range(0, ws.shape[1] - 2):
+            for i in range(0, ws.shape[1] - 3):
                 tracker[i] = 1
                 for j in range(len(tracker)):
                     if tracker[j] == 1:
                         ws, losses = self.cone_blitzv2Inner(ws, j, targ_coneExc, save_vid=False)
                         loss_tracker += losses
 
-            for i in range(0, ws.shape[1] - 2):
+            for i in range(0, ws.shape[1] - 3):
                 tracker[i] = 0
                 for j in range(len(tracker)):
                     if tracker[j] == 1:
