@@ -773,7 +773,7 @@ class LatentOptimizer(torch.nn.Module):
 
 
         # ---reconstruction---
-        best_w, imgs, visuals = self.useCone_step1(coneExc, more_loss, saveVideo)
+        best_w, imgs, visuals = self.useCone_step1(coneExc,  saveVideo)
 
         ws, imgs1, visuals1 = self.layer_useCone(best_w, coneExc, more_loss, saveVideo)
 #
@@ -803,7 +803,7 @@ class LatentOptimizer(torch.nn.Module):
         print(loss)
         return 0
 
-    def useCone_step1(self, targ_coneExc, more_loss, save_vid = True, w_avg_samples = 10000, initial_learning_rate = 0.05):
+    def useCone_step1(self, targ_coneExc, save_vid = True, w_avg_samples = 10000, initial_learning_rate = 0.05):
         counter = 0
         visuals = []
         imgs = []
@@ -1142,7 +1142,7 @@ class LatentOptimizer(torch.nn.Module):
         targ_coneExc = torch.matmul(self.render, flat)
         best_w, imgs, visuals = self.useCone_step1(targ_coneExc, save_vid=False)
 
-        loss_fcn = nn.MSELoss()
+
 
         #prev 50
         num_steps = 25
