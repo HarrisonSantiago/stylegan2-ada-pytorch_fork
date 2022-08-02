@@ -1153,6 +1153,7 @@ class LatentOptimizer(torch.nn.Module):
         #prev 5
         for _ in range(10):
             tracker = []
+            in_tr = []
             for i in range(0, ws.shape[1] - 3):
                 tracker.append(0)
 
@@ -1162,6 +1163,7 @@ class LatentOptimizer(torch.nn.Module):
                     if tracker[j] == 1:
                         ws, losses = self.cone_blitzv2Inner(ws, j, targ_coneExc, save_vid=False)
                         loss_tracker += losses
+                        in_tr += losses
 
             for i in range(0, ws.shape[1] - 3):
                 tracker[i] = 0
@@ -1169,6 +1171,9 @@ class LatentOptimizer(torch.nn.Module):
                     if tracker[j] == 1:
                         ws,losses = self.cone_blitzv2Inner(ws, j, targ_coneExc, save_vid = False)
                         loss_tracker += losses
+                        in_tr += losses
+            plt.plot(in_tr)
+            plt.show()
 
         img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
         im = self.genToPng(img)
