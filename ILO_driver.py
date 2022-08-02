@@ -1253,7 +1253,7 @@ class LatentOptimizer(torch.nn.Module):
 
         img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
         im = self.genToPng(img)
-        im.save('best_proj_cone.png')
+        im.save('best_proj_coneblitzv2.png')
 
         return ws, loss_tracker
 
