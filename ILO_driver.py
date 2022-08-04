@@ -1262,4 +1262,214 @@ class LatentOptimizer(torch.nn.Module):
 
         return ws, loss_tracker
 
+    def con_rec_class(self , targ_path, class_label, saveVideo = False):
+        # ---start---
 
+        # mp4 stuff
+        og_image = Image.open(targ_path).convert('RGB')
+        og_image_b = og_image.resize((256, 256), resample=Image.Resampling.NEAREST)
+
+
+        self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + targ_path, nargout=0)
+        og_visual = Image.open(self.visualPath).convert('RGB')
+
+        top = get_concat_h_multi_blank([og_image_b, og_visual])
+        top.save('combo.png')
+
+        linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(targ_path, self.retinaPath)),
+                                    dtype=torch.float32, device="cuda")
+
+        flat = torch.flatten(linear_image)
+        coneExc = torch.matmul(self.render, flat)
+
+        # ---reconstruction---
+        best_w, imgs, visuals = self.useCone_step1_cc(coneExc, class_label, saveVideo)
+
+        ws, imgs1, visuals1 = self.layer_useCone_cc(best_w, coneExc, class_label, saveVideo)
+        #
+        bottoms = []
+
+
+        if saveVideo:
+            for img, visual in zip(imgs, visuals):
+                bottoms.append(get_concat_h_multi_blank([img, visual]))
+            for img, visual in zip(imgs1, visuals1):
+                bottoms.append(get_concat_h_multi_blank([img, visual]))
+
+            video = imageio.get_writer('proj_test.mp4', mode='I', fps=10, codec='libx264', bitrate='16M')
+            print('Saving optimization progress video proj.mp4')
+            top = np.array(top)
+            for img in bottoms:
+                img1 = np.array(img)
+                # print(top.shape)
+
+                # print(img1.shape)
+                video.append_data(np.concatenate([top, img1], axis=0))
+            video.close()
+
+        final_img = Image.open('best_proj_cone_class.png').convert('RGB')
+        loss_fcn = nn.MSELoss
+        loss = loss_fcn(og_image, final_img)
+        print(loss)
+        return 0
+
+    def useCone_step1_cc(self, targ_coneExc, class_label, save_vid=False, w_avg_samples=10000, initial_learning_rate=0.05):
+        counter = 0
+        visuals = []
+        imgs = []
+
+        z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
+        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
+        w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
+        w_avg = np.mean(w_samples, axis=0, keepdims=True)
+
+        w_opt = torch.tensor(w_avg, dtype=torch.float32, device="cuda", requires_grad=True)
+        optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=initial_learning_rate)
+
+        loss_fcn = nn.MSELoss()
+
+        mse_min = np.inf
+
+        loss_tracker = []
+
+        for step in range(40):
+            ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
+
+            img = self.G.synthesis(ws, c = class_label,  noise_mode='const', force_fp32=True)
+
+            gen_png = self.genToPng(img)
+            path = 'current_guess.png'
+            gen_png.save(path)
+
+            # ---start---
+            linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
+                                        dtype=torch.float32, device="cuda")
+
+            # here linear_image is the adjustment we need to make
+            img = torch.squeeze(img)
+            img = img.permute((1, 2, 0))
+            # want to adjust img to gen_rec without loosing the comp map
+            # img = linear + c
+            # c = img - linear
+            # img - c = linear
+
+            c = img.detach().clone() - linear_image.detach().clone()
+            img -= c
+
+            flat = torch.flatten(img)
+            gen_coneExc = torch.matmul(self.render, flat)
+
+            # for MSELoss
+            loss = loss_fcn(gen_coneExc, targ_coneExc)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            loss_tracker.append(loss.detach().cpu())
+            if loss < mse_min:
+                counter += 1
+                if counter < 50 or counter % 4 == 0 and save_vid:
+                    bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
+                    b_path = 'upscaled.png'
+                    bigImage.save(b_path)
+                    self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout=0)
+                    visuals.append(Image.open(self.visualPath).convert('RGB'))
+                    imgs.append(bigImage)
+                mse_min = loss
+                best_w = ws
+
+        img = self.G.synthesis(best_w,c = class_label, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('step1_cone_cc.png')
+
+        plt.plot(loss_tracker)
+        plt.show()
+
+        return best_w, imgs, visuals
+
+    def layer_useCone_cc(self, ws, targ_coneExc, class_label, save_video):
+        counter = 0
+        visuals = []
+        imgs = []
+        loss_fcn = nn.MSELoss()
+
+        mse_min = np.inf
+        num_steps = 450
+        ws = ws.detach().clone()
+
+        for i in range(0, ws.shape[1]-3):
+            loss_tracker = []
+
+            w_opt = torch.tensor(ws[0, i], dtype=torch.float32, device="cuda", requires_grad=True)
+
+            optimizer = torch.optim.Adam([w_opt], betas=(0.9, 0.999), lr=0.05)
+
+            beg = torch.unsqueeze(ws[0, :i], dim=0)
+            end = torch.unsqueeze(ws[0, i + 1:], dim=0)
+
+            for step in range(num_steps):
+                mid = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
+                to_synt = torch.cat((beg, mid, end), dim=1)
+
+                img = self.G.synthesis(to_synt, c = class_label, noise_mode='const')
+                gen_png = self.genToPng(img)
+                path = 'current_guess.png'
+                gen_png.save(path)
+
+
+                # ---start---
+                linear_image = torch.tensor(np.asarray(self.engine.getImageLinear(path, self.retinaPath)),
+                                            dtype=torch.float32, device="cuda")
+
+                # here linear_image is the adjustment we need to make
+                img = torch.squeeze(img)
+                img = img.permute((1, 2, 0))
+                # want to adjust img to gen_rec without loosing the comp map
+                # img = linear + c
+                # c = img - linear
+                # img - c = linear
+
+                c = img.detach().clone() - linear_image.detach().clone()
+                img -= c
+
+                flat = torch.flatten(img)
+                gen_coneExc = torch.matmul(self.render, flat)
+
+                # for MSELoss
+                loss = loss_fcn(gen_coneExc, targ_coneExc)
+
+
+                if loss < mse_min:
+                    counter += 1
+                    if counter % 5 == 0 and save_video:
+                        bigImage = gen_png.resize((256, 256), resample=Image.Resampling.NEAREST)
+                        b_path = 'upscaled.png'
+                        bigImage.save(b_path)
+                        self.engine.getVisuals(self.retinaPath, self.home_dir + '/' + b_path, nargout=0)
+                        visuals.append(Image.open(self.visualPath).convert('RGB'))
+                        imgs.append(bigImage)
+
+                    mse_min = loss
+                    best_w = to_synt[0, i].detach().clone()
+                    best_img = img
+
+                optimizer.zero_grad()
+                loss.backward()
+                optimizer.step()
+
+
+                loss_tracker.append(loss.detach().cpu())
+
+            img = self.G.synthesis(ws, c = class_label, noise_mode='const', force_fp32=True)
+            im = self.genToPng(img)
+            im.save(str(i) + '.png')
+
+            plt.plot(loss_tracker)
+            plt.show()
+            ws[0, i] = best_w
+
+        img = self.G.synthesis(ws, c=class_label, noise_mode='const', force_fp32=True)
+        im = self.genToPng(img)
+        im.save('best_proj_cone_cc.png')
+
+        return ws, imgs, visuals
