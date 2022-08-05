@@ -7,8 +7,9 @@ import numpy as np
 import math
 import torch
 from torch import optim
-from torch.nn import functional as F
 from torchvision import transforms
+import torch.nn.functional as F
+
 from PIL import Image
 from tqdm import tqdm
 import torch.nn as nn
@@ -1318,8 +1319,12 @@ class LatentOptimizer(torch.nn.Module):
         visuals = []
         imgs = []
 
+        x = torch.tensor([class_label])
+        y = F.one_hot(x, num_classes=10)
+        label = y.repeat((100, 1)).cuda()
+
         z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
-        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), class_label)  # [N, L, C]
+        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), label)  # [N, L, C]
         w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
         w_avg = np.mean(w_samples, axis=0, keepdims=True)
 
@@ -1335,7 +1340,7 @@ class LatentOptimizer(torch.nn.Module):
         for step in range(40):
             ws = w_opt.repeat([1, self.G.mapping.num_ws, 1])
 
-            img = self.G.synthesis(ws, c = class_label,  noise_mode='const', force_fp32=True)
+            img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
 
             gen_png = self.genToPng(img)
             path = 'current_guess.png'
@@ -1411,7 +1416,7 @@ class LatentOptimizer(torch.nn.Module):
                 mid = torch.unsqueeze(torch.unsqueeze(w_opt, dim=0), dim=0)
                 to_synt = torch.cat((beg, mid, end), dim=1)
 
-                img = self.G.synthesis(to_synt, c = class_label, noise_mode='const')
+                img = self.G.synthesis(to_synt, noise_mode='const')
                 gen_png = self.genToPng(img)
                 path = 'current_guess.png'
                 gen_png.save(path)
