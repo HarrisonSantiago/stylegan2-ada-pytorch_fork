@@ -1383,7 +1383,7 @@ class LatentOptimizer(torch.nn.Module):
                 mse_min = loss
                 best_w = ws
 
-        img = self.G.synthesis(best_w,c = class_label, noise_mode='const', force_fp32=True)
+        img = self.G.synthesis(best_w, noise_mode='const', force_fp32=True)
         im = self.genToPng(img)
         im.save('step1_cone_cc.png')
 
@@ -1465,7 +1465,7 @@ class LatentOptimizer(torch.nn.Module):
 
                 loss_tracker.append(loss.detach().cpu())
 
-            img = self.G.synthesis(ws, c = class_label, noise_mode='const', force_fp32=True)
+            img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
             im = self.genToPng(img)
             im.save(str(i) + '.png')
 
@@ -1473,7 +1473,7 @@ class LatentOptimizer(torch.nn.Module):
             plt.show()
             ws[0, i] = best_w
 
-        img = self.G.synthesis(ws, c=class_label, noise_mode='const', force_fp32=True)
+        img = self.G.synthesis(ws, noise_mode='const', force_fp32=True)
         im = self.genToPng(img)
         im.save('best_proj_cone_cc.png')
 
