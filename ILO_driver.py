@@ -1321,7 +1321,7 @@ class LatentOptimizer(torch.nn.Module):
 
         x = torch.tensor([class_label])
         y = F.one_hot(x, num_classes=10)
-        label = y.repeat((100, 1)).cuda()
+        label = y.repeat((w_avg_samples, 1)).cuda()
 
         z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
         w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), label)  # [N, L, C]
