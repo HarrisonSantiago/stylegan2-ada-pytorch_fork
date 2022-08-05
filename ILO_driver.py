@@ -1319,7 +1319,7 @@ class LatentOptimizer(torch.nn.Module):
         imgs = []
 
         z_samples = np.random.RandomState(123).randn(w_avg_samples, self.G.z_dim)
-        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), None)  # [N, L, C]
+        w_samples = self.G.mapping(torch.from_numpy(z_samples).to("cuda"), class_label)  # [N, L, C]
         w_samples = w_samples[:, :1, :].cpu().numpy().astype(np.float32)  # [N, 1, C]
         w_avg = np.mean(w_samples, axis=0, keepdims=True)
 
